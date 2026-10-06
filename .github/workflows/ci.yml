@@ -125,7 +125,22 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install specify-cli pyyaml
+      - name: are the sibling actions released at the bundle's pins?
+        id: pins
+        shell: bash
+        run: |
+          # GitHub resolves every `uses:` of a composite action before it runs, so the self-test needs the tags to exist
+          ready=true
+          for ext in scopeguard archiguard auditguard; do
+            ref_var="$(echo "$ext" | tr a-z A-Z)_REF"; ref="${!ref_var}"
+            if ! git ls-remote --exit-code --tags "https://github.com/rlgdev/spec-kit-$ext" "refs/tags/$ref" >/dev/null 2>&1; then
+              echo "::notice title=action self-test skipped::rlgdev/spec-kit-$ext has no tag $ref yet; the composite action cannot resolve it"
+              ready=false
+            fi
+          done
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
       - name: a configured lab project
+        if: steps.pins.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -147,6 +162,7 @@ jobs:
           git init -q -b main && git config user.email ci@example.com && git config user.name ci
           bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
       - name: verify the lab (passes)
+        if: steps.pins.outputs.ready == 'true'
         uses: ./
         with:
           working-directory: ${{ runner.temp }}/lab
@@ -154,9 +170,11 @@ jobs:
           archiguard: "false"
           auditguard: "false"
       - name: make the base branches disagree
+        if: steps.pins.outputs.ready == 'true'
         run: |
           sed -i 's/^    base: main/    base: develop/' "$RUNNER_TEMP/lab/.specify/extensions/auditguard/auditguard-config.yml"
       - name: verify again (must fail)
+        if: steps.pins.outputs.ready == 'true'
         id: tampered
         continue-on-error: true
         uses: ./
@@ -165,4 +183,5 @@ jobs:
           scopeguard: "false"
           archiguard: "false"
           auditguard: "false"
-      - run: test "${{ steps.tampered.outcome }}" = "failure"
+      - if: steps.pins.outputs.ready == 'true'
+        run: test "${{ steps.tampered.outcome }}" = "failure"
