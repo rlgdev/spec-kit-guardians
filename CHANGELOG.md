@@ -30,5 +30,10 @@ Pins: scopeGuard 0.4.0 · archiGuard 0.1.0 · auditGuard 0.1.0 · archiguard-tem
 - **Agent commands** `/speckit.guardians.configure` and `/speckit.guardians.verify`; launchers for bash,
   PowerShell and Python with the family's interpreter search.
 - **GitHub Action**: the three siblings' actions (pinned) plus `guardians verify`, each switchable.
+- **`tools/check-family.py`**: the consistency check across the four repositories (pins, catalogs, the siblings'
+  CI refs, version ranges, fixtures, read-only defaults, launcher parity, the Spec Kit floor, README links);
+  CI runs it against the siblings at the pinned tags.
+- **[docs/getting-started.md](docs/getting-started.md)**: the step-by-step guide for a first project, and
+  `CONTRIBUTING.md` with the release order of the family; `CODEOWNERS`, `SECURITY.md`, Dependabot.
 - Tests on the siblings' real config templates; an end-to-end run against a real Spec Kit install
   (`tools/e2e-speckit.sh`); `tools/build.py` with pin and version consistency checks and reproducible archives.

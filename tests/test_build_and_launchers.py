@@ -74,3 +74,16 @@ def test_bash_launcher(tmp_path: Path):
     proc = subprocess.run(["bash", str(REPO / "scripts" / "bash" / "guardians.sh"), "version"], cwd=str(tmp_path),
                           capture_output=True, text=True, env=env)
     assert proc.returncode == 2 and "not a working Python" in proc.stderr
+
+
+def test_check_family_help():
+    proc = run(str(REPO / "tools" / "check-family.py"), "--help")
+    assert proc.returncode == 0 and "--scopeguard-src" in proc.stdout
+
+
+@pytest.mark.skipif(not all(os.environ.get(f"{e}_SRC") for e in ("SCOPEGUARD", "ARCHIGUARD", "AUDITGUARD")),
+                    reason="SCOPEGUARD_SRC, ARCHIGUARD_SRC and AUDITGUARD_SRC checkouts needed")
+def test_check_family_passes_on_the_siblings():
+    proc = run(str(REPO / "tools" / "check-family.py"))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "RESULT: OK" in proc.stdout

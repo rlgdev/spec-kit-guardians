@@ -1,5 +1,12 @@
 # Guardians for Spec Kit
 
+[![CI](https://github.com/rlgdev/spec-kit-guardians/actions/workflows/ci.yml/badge.svg)](https://github.com/rlgdev/spec-kit-guardians/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+> **New here?** Read [docs/getting-started.md](docs/getting-started.md): prerequisites, the install, the first
+> `configure`, what to do once per project, CI, and what every message means. Ten minutes, no prior knowledge of the
+> three tools needed.
+
 One cover for the three Guardians of the AI-native SDLC on [GitHub Spec Kit](https://github.com/github/spec-kit):
 
 | Guardian | Keeps | Repository |
@@ -219,6 +226,7 @@ Guardians' three edits stay in place (they are the siblings' documented settings
 ```bash
 python -m pytest -q                   # tests on the siblings' real config templates (set AUDITGUARD_SRC for the YAML fallback test)
 python tools/build.py --check         # versions, pins and catalogs agree; referenced files exist
+python tools/check-family.py          # the four repositories agree (pins, catalogs, CI refs, ranges, launchers; siblings as ../spec-kit-<id> or *_SRC)
 python tools/build.py                 # dist/guardians.zip, dist/guardians-bundle.zip, dist/SHA256SUMS
 tools/e2e-speckit.sh                  # against a real Spec Kit install: specify init, the siblings from checkouts, configure, verify
 ```
@@ -226,7 +234,8 @@ tools/e2e-speckit.sh                  # against a real Spec Kit install: specify
 To release, bump the version in `extension.yml`, `scripts/python/guardians_core/__init__.py`, `bundle/bundle.yml`
 (bundle version and the `guardians` pin), the three catalogs and the sibling pins in `action.yml`, add the
 CHANGELOG entry and push a `vX.Y.Z` tag; the release workflow attaches `guardians.zip`, `guardians-bundle.zip` and
-`SHA256SUMS`. The specification is in [docs/specification.md](docs/specification.md).
+`SHA256SUMS`. The specification is in [docs/specification.md](docs/specification.md); [CONTRIBUTING.md](CONTRIBUTING.md) has the
+conventions and the release order of the family.
 
 ## License
 
