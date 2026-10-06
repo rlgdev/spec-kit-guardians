@@ -153,7 +153,8 @@ jobs:
           archiguard: "false"
           auditguard: "false"
       - name: make the base branches disagree
-        run: sed -i 's/^    base: main/    base: develop/' lab/.specify/extensions/auditguard/auditguard-config.yml
+        run: |
+          sed -i 's/^    base: main/    base: develop/' lab/.specify/extensions/auditguard/auditguard-config.yml
       - name: verify again (must fail)
         id: tampered
         continue-on-error: true
