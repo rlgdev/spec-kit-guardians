@@ -113,20 +113,20 @@ If the result is not `OK`:
 
 | Line | Meaning | Do |
 |------|---------|----|
-| `[FAIL] installed : not installed: ...` | an extension is missing | install it (step 1), run `configure` again |
-| `[FAIL] git_base_agrees : archiguard git.base=main, auditguard golden.git.base=develop` | the two tools name different base branches; Guardians never picks a side | edit one of the two files named in the `fix:` line, run `configure` again |
-| `[FAIL] preset_matches_integration : archiGuard is configured inline but archiguard-templates is not installed` | the preset is missing, so the gates fell back to hooks | `specify preset add ...` (step 1), run `configure` again |
-| `[WARN] gitattributes : .gitattributes lacks ...` | auditGuard's hash chain needs its files excluded from line-ending conversion | `bash .specify/extensions/auditguard/scripts/bash/auditguard.sh configure` writes the lines |
-| `Guardians: ERROR: ... configure failed (exit 2)` | one tool's own `configure` refused (usually a typo in its config file: unknown keys are errors) | read its output above the error, fix the key it names |
+| `[FAIL] installed                   not installed: ...` | an extension is missing | install it (step 1), run `configure` again |
+| `[FAIL] git_base_agrees             archiguard git.base=main, auditguard golden.git.base=develop` | the two tools name different base branches; Guardians never picks a side | edit one of the two files named in the `fix:` line, run `configure` again |
+| `[FAIL] preset_matches_integration  archiGuard is configured inline but archiguard-templates is not installed (it fell back to hooks)` | the preset is missing, so the gates fell back to hooks | `specify preset add ...` (step 1), run `configure` again |
+| `[WARN] gitattributes               .gitattributes lacks 3 auditGuard line(s): ...` | auditGuard's hash chain needs its files excluded from line-ending conversion | `bash .specify/extensions/auditguard/scripts/bash/auditguard.sh configure` writes the lines |
+| `ERROR: <tool> configure failed (exit N); nothing after it ran` (Guardians exits 2) | one tool's own `configure` refused with exit N (usually a bad value in its config file, or an unknown key: archiGuard and auditGuard reject those, scopeGuard 0.4.0 does not) | the tool's own message is indented under the `<tool> : configure exited N` line just above; fix what it names, run `configure` again |
 
 Then commit:
 
 ```bash
-git add .specify .gitattributes && git commit -m "Guardians: install and configure"
+git add .specify .gitattributes audit && git commit -m "Guardians: install and configure"
 ```
 
-`.specify/` holds the installed extensions, their configs, the standards lock and the ledger: it is part of the
-project, and CI reads it.
+`.specify/` holds the installed extensions, their configs, the standards lock and the ledger, and `audit/` the trail
+auditGuard's `configure` opened (`sprints.yml`): both are part of the project, and CI reads them.
 
 ---
 
@@ -297,8 +297,12 @@ READMEs have Bitbucket Pipelines examples.
 The config files, with their full reference: [scopeGuard](https://github.com/rlgdev/spec-kit-scopeguard/blob/main/config-template.yml)
 (`scopeguard-config.yml`), [archiGuard](https://github.com/rlgdev/spec-kit-archiguard/blob/main/docs/configuration.md)
 (`archiguard-config.yml`, `scope-config.yml`), [auditGuard](https://github.com/rlgdev/spec-kit-auditguard/blob/main/docs/configuration.md)
-(`auditguard-config.yml`), [Guardians](../config-template.yml) (`guardians-config.yml`, optional). In every one
-of them **an unknown key is an error**: a typo never switches a gate off silently.
+(`auditguard-config.yml`), [Guardians](../config-template.yml) (`guardians-config.yml`, optional). In
+`archiguard-config.yml`, `auditguard-config.yml` and `guardians-config.yml` **an unknown key is an error** (exit `2`),
+so a typo never switches a gate off silently. The pinned scopeGuard 0.4.0 validates values only (`mode`, `integration`,
+`autocorrect`, `<gate>.enabled`, `unknown_ids`, `ids`) and ignores keys it does not read, in `scopeguard-config.yml`
+and in archiGuard's `scope-config.yml` alike: after editing either, compare it against its template. scopeGuard's
+next release rejects unknown keys as well.
 
 Environment variables for one run: `SCOPEGUARD_PYTHON` / `ARCHIGUARD_PYTHON` / `AUDITGUARD_PYTHON` /
 `GUARDIANS_PYTHON` (the interpreter to use), `SCOPEGUARD_MODE=report`, `ARCHIGUARD_INTEGRATION`,
@@ -310,7 +314,7 @@ Environment variables for one run: `SCOPEGUARD_PYTHON` / `ARCHIGUARD_PYTHON` / `
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `scopeGuard: ERROR: no Python 3.8+ interpreter found` (any tool) | nothing usable on PATH | install Python, or set `<ID>_PYTHON=/path/to/python`; with `uv` installed the launchers also use specify-cli's Python |
+| `scopeGuard: ERROR: no Python 3.9+ interpreter found` (any tool) | nothing usable on PATH | install Python, or set `<ID>_PYTHON=/path/to/python`; with `uv` installed the launchers also use specify-cli's Python |
 | the gate runs twice in `/speckit.plan` | both the inline step and a hook are on, or both presets are installed | `guardians verify` names it; `specify preset remove scopeguard-templates`, then `guardians configure` |
 | `/speckit.plan` says `skipped` for the gates | the wrapped step is off because the config says `hooks`, or the other way round | `guardians configure` (it runs every tool's configure); `[WARN] hooks_match_integration` names the tool |
 | `cannot evaluate` (exit 2) in archiGuard step A | no standards lock, no domain map pin, or a pin that moved | step 3.1; the message names the file |

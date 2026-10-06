@@ -76,17 +76,17 @@ stops before changing anything.
 
 ```text
 Guardians 0.1.0 | configure | /work/orders
-config: built-in defaults | order: scopeguard, archiguard, auditguard
+config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, archiguard, auditguard
 
   Siblings:
-  scopeGuard : scopeGuard 0.4.0 | configure | integration embedded
-  archiGuard : archiGuard 0.1.0 | configure | integration inline
+  scopeGuard : scopeGuard 0.4.0 | configure
+  archiGuard : archiGuard 0.1.0 | configure
   auditGuard : auditGuard 0.1.0 | configure
 
   Changed:
     .specify/extensions/scopeguard/scopeguard-config.yml: integration: inline -> embedded (archiGuard runs the scope gate)
     .specify/extensions/archiguard/archiguard-config.yml: edit_guard.always_readonly += audit/**, .specify/extensions/auditguard/**
-    .specify/extensions.yml: 20 hook priorities set (auditguard after_*: 10 -> 90, auditguard before_*: 10 -> 1, ...)
+    .specify/extensions.yml: 20 hook priorities set: auditguard after_* 10 -> 90 (10), auditguard before_* 10 -> 1 (10)
 
   Tools:
     scopeGuard : 0.4.0 | integration embedded | mode enforce | hooks 0/5
@@ -113,7 +113,7 @@ config: built-in defaults | order: scopeguard, archiguard, auditguard
 
 Order of work: the two config edits first (so scopeGuard's own `configure` already sees `embedded` and switches
 its hooks off), then the three `configure` commands in the configured order, then the hook priorities, then the
-report. `--dry-run` shows every edit as `would change` and passes `--dry-run` to the siblings. A second run
+report. `--dry-run` lists every edit under `Would change:` instead of making it and passes `--dry-run` to the siblings. A second run
 changes nothing.
 
 Why the hook order: on an event two Guardians share, auditGuard must record the start before a gate runs and the
@@ -224,7 +224,7 @@ Guardians' three edits stay in place (they are the siblings' documented settings
 ## Development
 
 ```bash
-python -m pytest -q                   # tests on the siblings' real config templates (set AUDITGUARD_SRC for the YAML fallback test)
+python -m pytest -q                   # tests on the siblings' real config templates (AUDITGUARD_SRC enables the YAML-fallback test; all three *_SRC the check-family test)
 python tools/build.py --check         # versions, pins and catalogs agree; referenced files exist
 python tools/check-family.py          # the four repositories agree (pins, catalogs, CI refs, ranges, launchers; siblings as ../spec-kit-<id> or *_SRC)
 python tools/build.py                 # dist/guardians.zip, dist/guardians-bundle.zip, dist/SHA256SUMS

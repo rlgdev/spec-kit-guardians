@@ -11,7 +11,8 @@ What must agree (one [OK] / [FAIL] line each; exit 1 on a failure, 2 when a repo
   ci-refs     the siblings' CI pins (SCOPEGUARD_TAG, ARCHIGUARD_TAG) and the Guardians *_REF values equal the bundle pins
   ranges      archiGuard's gates.scope.version and auditGuard's collectors.*.version accept the pinned versions, and the
               constants Guardians assumes for them (guardians_core/siblings.py) equal the siblings' templates
-  fixtures    tests/fixtures/<id>-config.yml is the sibling's current config-template.yml
+  fixtures    tests/fixtures/<id>-config.yml is the sibling's config-template.yml AT THE PINNED TAG (read with
+              `git show v<pin>:config-template.yml` when the checkout has that tag, else its working tree)
   readonly    the read-only paths Guardians assumes equal the siblings' templates
   launchers   the bash and PowerShell launchers of all four carry the family's interpreter search (Windows Store stub guard)
   speckit     the bundle's speckit_version floor is at least every sibling's
@@ -25,6 +26,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -97,6 +99,18 @@ def bundle_pins(text: str) -> Tuple[str, Dict[str, str], Dict[str, str], str]:
         if match and section is not None:
             section[match.group(1)] = match.group(2)
     return version, extensions, presets, floor
+
+
+def pinned_template(repo: Path, pin: str) -> Tuple[str, str]:
+    """(config-template.yml at tag v<pin> when the checkout has it, else the working tree; where it came from)."""
+    try:
+        proc = subprocess.run(["git", "-C", str(repo), "show", f"v{pin}:config-template.yml"], capture_output=True,
+                              text=True, encoding="utf-8", timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        proc = None
+    if proc is not None and proc.returncode == 0:
+        return proc.stdout, f"at v{pin}"
+    return read(repo / "config-template.yml"), f"(working tree; tag v{pin} not in the checkout)"
 
 
 def floor_of(constraint: str) -> str:
@@ -185,10 +199,14 @@ def main() -> int:
             problems.append(f"guardians_core/siblings.py AUDITGUARD_COLLECTOR_RANGES[{ext}] is {AUDITGUARD_COLLECTOR_RANGES[ext]!r}, auditGuard's template says {wanted!r}")
     report.result("ranges", problems, f"archiGuard {scope_range} and auditGuard {AUDITGUARD_COLLECTOR_RANGES} accept the pinned versions")
 
-    # fixtures
-    problems = [f"tests/fixtures/{ext}-config.yml differs from spec-kit-{ext}/config-template.yml (copy it)"
-                for ext in SIBLINGS if read(HERE / "tests" / "fixtures" / f"{ext}-config.yml") != read(repos[ext] / "config-template.yml")]
-    report.result("fixtures", problems, "the fixtures are the siblings' current config templates")
+    # fixtures: the template as released at the pin (the bundle installs that one), else the working tree
+    problems, sources = [], []
+    for ext in SIBLINGS:
+        template, source = pinned_template(repos[ext], ext_pins[ext])
+        sources.append(f"{ext} {source}")
+        if read(HERE / "tests" / "fixtures" / f"{ext}-config.yml") != template:
+            problems.append(f"tests/fixtures/{ext}-config.yml differs from spec-kit-{ext}/config-template.yml {source} (copy it when the pin moves)")
+    report.result("fixtures", problems, "the fixtures are the siblings' config templates at the pins (" + ", ".join(sources) + ")")
 
     # readonly
     problems = []

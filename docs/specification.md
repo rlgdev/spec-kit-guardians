@@ -13,6 +13,9 @@
 | A4 | FR-703 | The e2e clones a sibling at its pinned tag and falls back to `main` with a note when the tag does not exist yet (auditGuard until its `v0.1.0`). | CI stays meaningful before the sibling's release and tightens automatically after it. |
 | A5 | §5.3 | `checks.<id>: off` must be written as a string (`"off"`); a bare `off` is read as `false` by YAML 1.1 and is accepted as `off` as well. | PyYAML semantics. |
 | A6 | FR-702 | The unit tests drive `configure` with **stub** sibling launchers that answer `configure --dry-run --json` the way the real ones do (integration, effective integration, `scope_in_pipeline`, mode) and record the call order; the real siblings are exercised by the e2e only. | Fast, deterministic tests; the contract with the siblings is their JSON, which the stubs reproduce. |
+| A7 | FR-205, FR-207 | The changes are listed as a block: a `Changed:` header (`Would change:` with `--dry-run`) followed by one indented `<file>: <what>` line per edit, or `No change needed.` when there is none — not a `changed:`/`would change` prefix on every line. | Matches the `Siblings:`/`Tools:`/`Checks:` blocks of the same report; the unit tests and the e2e assert these exact strings. |
+| A8 | §3.4, US3 | A check line is `<mark> <id> <message>` with the mark padded to 6 columns (`[OK]  `, `[WARN]`, `[FAIL]`, `[--]  `) and the id padded to 27, no ` : ` separator; the `fix:` line is indented under the message column. US3's line is `[FAIL] git_base_agrees             archiguard git.base=main, auditguard golden.git.base=develop` and the two file paths are on its `fix:` line. `--json` prints `{"version", "root", "status", "tools", "checks", "notes"}`: top-level `status` is `ok` \| `warn` \| `fail` (a check's additionally `na` or `off`); every `tools` entry carries `installed` (an absent sibling is `{"installed": false}`), an installed one adds `version` and, except `guardians`, `integration`, `effective_integration`, `mode`, `hooks_on`, `hooks`, plus `status_error` when its `configure --dry-run --json` could not be read and, for `archiguard`, `scope_in_pipeline` and `preset`; `notes` is a list of strings (empty in this version). | Aligned columns: the message starts where the longest id ends; the JSON carries what the text report shows. |
+| A9 | FR-313, §5.5 | A tools line is `<Name padded to 10> : <version> \| integration <configured>[ -> <effective>] \| mode <mode> \| hooks <on>/<registered>`; archiGuard's line adds `\| scope gate in pipeline` / `\| scope gate not in pipeline` (when its JSON carries `scope_in_pipeline`) and `\| preset installed` / `\| preset missing`; Guardians' own line is `Guardians  : <version>`; an absent Guardian prints `<Name> : not installed`. `integration`, `effective_integration`, `mode` and `scope_in_pipeline` come from the sibling's `configure --dry-run --json` (a key that JSON does not print, such as archiGuard's `mode`, from its config file); the hook counts come from `.specify/extensions.yml` (entries with `extension: <id>`, enabled unless `enabled: false`); the JSON's `hooks[]` and `readiness` are not read. | Same shape as the configure sibling line (A3); the archiGuard facts the checks use are shown where they come from. |
 
 | | |
 |---|---|
@@ -308,7 +311,9 @@ Exit `1` when any check is `FAIL`.
   pin equals the installed version) — skipped with a note on Spec Kit versions that refuse.
 - **FR-704** CI (`.github/workflows/ci.yml`): tests on ubuntu/windows/macos × Python 3.9/3.13; lint
   (pyflakes, shellcheck, `build.py --check`); launchers; e2e against `specify-cli` latest and `1.0.1`;
-  action self-test on a fixture project (verify passes, then a tampered `git.base` fails).
+  action self-test on a fixture project (verify passes, then a tampered `git.base` fails); `family`
+  (`tools/check-family.py` against the siblings' checkouts at the bundle's pins, `main` for a tag that
+  does not exist yet).
 - **FR-705** Release (`release.yml`): on tag `vX.Y.Z`, tests, `build.py --check-tag`, release with the
   three assets and the CHANGELOG section as notes.
 
@@ -433,7 +438,7 @@ guardians version
 | Source | Keys |
 |--------|------|
 | `.specify/extensions/<id>/extension.yml` | `extension.version` (regex) |
-| `<id> configure --dry-run --json` | `integration`, `effective_integration`, `mode` (scopeGuard), `hooks[]`, `scope_in_pipeline`, `readiness` (archiGuard) |
+| `<id> configure --dry-run --json` | `integration`, `effective_integration`, `mode` (scopeGuard, auditGuard; archiGuard's from its config file), `scope_in_pipeline` (archiGuard) |
 | `scopeguard-config.yml` | `integration`, `mode` |
 | `archiguard-config.yml` | `integration`, `mode`, `git.base`, `edit_guard.enabled`, `edit_guard.always_readonly`, `gates.scope.version` |
 | `auditguard-config.yml` | `integration`, `mode`, `audit.root`, `golden.git.base`, `guard.readonly`, `collectors.scopeguard.version`, `collectors.archiguard.version` |
@@ -445,13 +450,14 @@ guardians version
 
 ```json
 {"version": "0.1.0", "root": "/path/to/project", "status": "fail",
- "tools": {"scopeguard": {"version": "0.4.0", "integration": "embedded", "effective_integration": "embedded", "mode": "enforce", "hooks_on": 0, "hooks": 5},
-           "archiguard": {"version": "0.1.0", "integration": "inline", "effective_integration": "inline", "mode": "enforce", "hooks_on": 0, "hooks": 6, "scope_in_pipeline": true},
-           "auditguard": {"version": "0.1.0", "integration": "hooks", "effective_integration": "hooks", "mode": "record", "hooks_on": 20, "hooks": 20},
-           "guardians":  {"version": "0.1.0"}},
+ "tools": {"scopeguard": {"installed": true, "version": "0.4.0", "integration": "embedded", "effective_integration": "embedded", "mode": "enforce", "hooks_on": 0, "hooks": 5},
+           "archiguard": {"installed": true, "version": "0.1.0", "integration": "inline", "effective_integration": "inline", "mode": "enforce", "hooks_on": 0, "hooks": 6, "scope_in_pipeline": true, "preset": true},
+           "auditguard": {"installed": true, "version": "0.1.0", "integration": "hooks", "effective_integration": "hooks", "mode": "record", "hooks_on": 20, "hooks": 20},
+           "guardians":  {"installed": true, "version": "0.1.0"}},
  "checks": [{"id": "git_base_agrees", "severity": "fail", "status": "fail",
              "message": "archiguard git.base=main, auditguard golden.git.base=develop",
-             "fix": ".specify/extensions/archiguard/archiguard-config.yml git.base / .specify/extensions/auditguard/auditguard-config.yml golden.git.base - a person decides which is right"}]}
+             "fix": ".specify/extensions/archiguard/archiguard-config.yml git.base / .specify/extensions/auditguard/auditguard-config.yml golden.git.base - a person decides which is right"}],
+ "notes": []}
 ```
 
 ---
@@ -462,7 +468,7 @@ guardians version
 
 ```text
 spec-kit-guardians/
-  extension.yml  config-template.yml  README.md  CHANGELOG.md  LICENSE  action.yml  .extensionignore  .gitattributes  .gitignore  pytest.ini
+  extension.yml  config-template.yml  README.md  CHANGELOG.md  CONTRIBUTING.md  SECURITY.md  LICENSE  action.yml  .extensionignore  .gitattributes  .gitignore  pytest.ini
   bundle/bundle.yml  bundle/README.md
   catalog/extensions.json  catalog/presets.json  catalog/bundles.json
   commands/speckit.guardians.configure.md  commands/speckit.guardians.verify.md
@@ -476,10 +482,10 @@ spec-kit-guardians/
     edits.py      the three line edits (integration line, always_readonly list, hook priorities)
     configure.py  FR-2xx
     verify.py     FR-3xx
-  tests/  fixtures/ (sibling templates at the pins, a registry, CODEOWNERS)  test_edits.py  test_verify.py  test_configure.py  test_build.py  test_launchers.py
-  tools/build.py  tools/e2e-speckit.sh
-  docs/specification.md
-  .github/workflows/ci.yml  release.yml
+  tests/  conftest.py (fake project, stub sibling launchers, a registry in Spec Kit's dump style, CODEOWNERS)  fixtures/ (the siblings' config templates at the pins)  test_config_and_yaml.py  test_edits.py  test_verify.py  test_configure.py  test_build_and_launchers.py
+  tools/build.py  tools/check-family.py  tools/e2e-speckit.sh
+  docs/specification.md  docs/getting-started.md
+  .github/workflows/ci.yml  release.yml  .github/CODEOWNERS  .github/dependabot.yml
 ```
 
 ### 6.2 Implementation order

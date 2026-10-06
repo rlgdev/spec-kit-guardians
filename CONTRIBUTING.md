@@ -14,7 +14,7 @@ end-to-end check a `specify` on PATH.
 
 ```bash
 python -m pip install pytest pyflakes pyyaml
-python -m pytest -q                      # tests on the siblings' real config templates (AUDITGUARD_SRC for the YAML-fallback test)
+python -m pytest -q                      # tests on the siblings' real config templates (AUDITGUARD_SRC enables the YAML-fallback test; all three *_SRC the check-family test)
 python -m pyflakes scripts/python tools tests
 shellcheck scripts/bash/guardians.sh tools/e2e-speckit.sh
 python tools/build.py --check            # the Guardians version, the pins, the catalogs and action.yml agree
