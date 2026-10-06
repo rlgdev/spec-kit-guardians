@@ -10,7 +10,9 @@ permissions:
   contents: read
 
 env:
-  # the siblings' checkouts for the YAML-fallback test and the e2e; the e2e falls back to main when a tag is missing
+  # the bundle's pins (check-family's ci-refs check requires them to equal bundle/bundle.yml): the test job's auditGuard
+  # checkout, the tag the family job fetches, the e2e's clones and the action self-test. A missing tag falls back to
+  # main (the family job and the e2e say so); the action self-test is skipped instead, GitHub must resolve its `uses:` tags
   SCOPEGUARD_REF: v0.4.0
   ARCHIGUARD_REF: v0.1.0
   AUDITGUARD_REF: v0.1.0

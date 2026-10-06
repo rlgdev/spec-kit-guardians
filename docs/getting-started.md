@@ -72,7 +72,7 @@ Spec Kit asks you to confirm each `specify extension add --from` install (`Conti
 The preset install does not ask.
 
 Or, for a release that does not exist yet, from checkouts of the repositories (`--dev` installs the checkout as
-it is; the same works with the `dist/<id>.zip` that `python tools/build.py` builds in each checkout):
+it is; `--from` takes only an https or loopback-http URL, not a local `dist/<id>.zip`):
 
 ```bash
 for id in scopeguard archiguard auditguard guardians; do

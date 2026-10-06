@@ -26,9 +26,10 @@ python tools/build.py                    # dist/guardians.zip, dist/guardians-bu
 `tools/check-family.py` is the consistency check across the four repositories: every bundle pin equals the
 sibling's own version; every catalog entry equals the sibling's own catalog entry; the siblings' CI pins and
 the Guardians refs equal the bundle pins; archiGuard's and auditGuard's version ranges accept the pinned
-versions; the fixtures under `tests/fixtures/` are the siblings' current config templates; the launchers of all
-four carry the same interpreter search; every README names its own current release. CI runs it against the
-siblings' `main` branches (the fixtures against the templates at the pinned tags): a sibling that bumps its
+versions; the fixtures under `tests/fixtures/` are the siblings' config templates at the pinned tags (read with
+`git show v<pin>:config-template.yml`, or from the working tree when the checkout has no such tag); the
+launchers of all four carry the same interpreter search; every README names its own current release. CI runs it
+against the siblings' `main` branches (the pinned tags fetched for the fixtures): a sibling that bumps its
 version on `main` turns the job red until the pins here follow it (step 5 of the sibling's `CONTRIBUTING.md`).
 
 ## Conventions

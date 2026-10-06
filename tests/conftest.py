@@ -66,8 +66,10 @@ effective = integration
 if EXT == "archiguard" and integration == "inline" and not (ROOT / ".specify" / "presets" / "archiguard-templates").is_dir():
     effective = "hooks"
 data = {{"tool": EXT, "version": VERSION, "command": "configure", "dry_run": "--dry-run" in args,
-        "integration": integration, "effective_integration": effective, "note": None, "hooks": [], "changed": 0}}
-if EXT == "scopeguard":
+        "integration": integration, "note": None, "hooks": [], "changed": 0}}
+if EXT != "auditguard":
+    data["effective_integration"] = effective
+if EXT in ("scopeguard", "auditguard"):
     data["mode"] = top("mode", "{default_mode}")
 if EXT == "archiguard":
     data["scope_in_pipeline"] = not (EXT_DIR / "NO_SCOPE").exists()

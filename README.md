@@ -144,8 +144,9 @@ Severities are set in `guardians-config.yml` (below). `verify --json` prints the
 `FAIL`.
 
 The checks read the siblings through their own interfaces: `integration`, `effective_integration`, `mode` and
-`scope_in_pipeline` come from each tool's `configure --dry-run --json` (so workstation overrides and fallbacks
-count), the rest from their committed config files and `.specify/extensions.yml`. YAML is read with PyYAML when
+`scope_in_pipeline` come from each tool's `configure --dry-run --json` when it prints them (so workstation
+overrides and fallbacks count; auditGuard prints no `effective_integration`, archiGuard no `mode`), the rest
+from their committed config files and `.specify/extensions.yml`. YAML is read with PyYAML when
 present, else with the reader of the installed auditGuard or archiGuard.
 
 ## Commands

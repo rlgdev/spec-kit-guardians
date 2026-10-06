@@ -256,7 +256,8 @@ Exit `1` when any check is `FAIL`.
 - **FR-313 tools table.** Before the checks, `verify` prints one line per Guardian:
   `<name> <version> | integration <configured>[ -> <effective>] | mode <mode> | hooks <on>/<registered>`
   with `not installed` when absent; values come from the sibling's `configure --dry-run --json`
-  (`integration`, `effective_integration`, `mode`, `hooks`, `scope_in_pipeline`, `readiness`) and, for keys
+  (`integration`, `effective_integration`, `mode`, `scope_in_pipeline`, each when that sibling prints it; §5.5)
+  and, for keys
   that JSON does not carry (`git.base`, `edit_guard.*`, `gates.scope.version`, `golden.git.base`,
   `guard.readonly`, `collectors.*.version`, `audit.root`), from the config files (§5.5).
 - **FR-314** `verify` never writes.
@@ -312,8 +313,8 @@ Exit `1` when any check is `FAIL`.
 - **FR-704** CI (`.github/workflows/ci.yml`): tests on ubuntu/windows/macos × Python 3.9/3.13; lint
   (pyflakes, shellcheck, `build.py --check`); launchers; e2e against `specify-cli` latest and `1.0.1`;
   action self-test on a fixture project (verify passes, then a tampered `git.base` fails); `family`
-  (`tools/check-family.py` against the siblings' checkouts at the bundle's pins, `main` for a tag that
-  does not exist yet).
+  (`tools/check-family.py` against the siblings' `main` branches, the fixtures against the config templates at the
+  pinned tags; a tag that does not exist yet is compared with `main`).
 - **FR-705** Release (`release.yml`): on tag `vX.Y.Z`, tests, `build.py --check-tag`, release with the
   three assets and the CHANGELOG section as notes.
 
@@ -438,7 +439,7 @@ guardians version
 | Source | Keys |
 |--------|------|
 | `.specify/extensions/<id>/extension.yml` | `extension.version` (regex) |
-| `<id> configure --dry-run --json` | `integration`, `effective_integration`, `mode` (scopeGuard, auditGuard; archiGuard's from its config file), `scope_in_pipeline` (archiGuard) |
+| `<id> configure --dry-run --json` | `integration`, `effective_integration` (scopeGuard, archiGuard; auditGuard prints none and its `integration` is used), `mode` (scopeGuard, auditGuard; archiGuard's from its config file), `scope_in_pipeline` (archiGuard) |
 | `scopeguard-config.yml` | `integration`, `mode` |
 | `archiguard-config.yml` | `integration`, `mode`, `git.base`, `edit_guard.enabled`, `edit_guard.always_readonly`, `gates.scope.version` |
 | `auditguard-config.yml` | `integration`, `mode`, `audit.root`, `golden.git.base`, `guard.readonly`, `collectors.scopeguard.version`, `collectors.archiguard.version` |
