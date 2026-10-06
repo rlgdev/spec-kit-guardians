@@ -114,7 +114,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install "${{ matrix.speckit }}"
-      - run: tools/e2e-speckit.sh
+      - run: bash tools/e2e-speckit.sh
 
   action:
     name: GitHub Action self-test (guardians verify)
@@ -137,6 +137,7 @@ jobs:
               git clone -q --depth 1 "https://github.com/rlgdev/spec-kit-$ext" "$RUNNER_TEMP/$ext"
             fi
           done
+          cd "$RUNNER_TEMP"
           specify init lab --integration claude --script sh --ignore-agent-tools --non-interactive >/dev/null
           cd lab
           for dir in "$RUNNER_TEMP/scopeguard" "$RUNNER_TEMP/archiguard" "$RUNNER_TEMP/auditguard" "$GITHUB_WORKSPACE"; do
@@ -148,19 +149,19 @@ jobs:
       - name: verify the lab (passes)
         uses: ./
         with:
-          working-directory: lab
+          working-directory: ${{ runner.temp }}/lab
           scopeguard: "false"
           archiguard: "false"
           auditguard: "false"
       - name: make the base branches disagree
         run: |
-          sed -i 's/^    base: main/    base: develop/' lab/.specify/extensions/auditguard/auditguard-config.yml
+          sed -i 's/^    base: main/    base: develop/' "$RUNNER_TEMP/lab/.specify/extensions/auditguard/auditguard-config.yml"
       - name: verify again (must fail)
         id: tampered
         continue-on-error: true
         uses: ./
         with:
-          working-directory: lab
+          working-directory: ${{ runner.temp }}/lab
           scopeguard: "false"
           archiguard: "false"
           auditguard: "false"
