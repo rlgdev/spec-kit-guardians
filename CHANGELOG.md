@@ -28,11 +28,12 @@ Pins: scopeGuard 0.4.0 · archiGuard 0.1.0 · auditGuard 0.1.0 · archiguard-tem
   agrees, edit guard covers the audit trail, modes agree, `.gitattributes`, CODEOWNERS. Exit 1 on a failure;
   `--json`.
 - **Agent commands** `/speckit.guardians.configure` and `/speckit.guardians.verify`; launchers for bash,
-  PowerShell and Python with the family's interpreter search.
+  PowerShell and Python with the family's interpreter search. The engine never writes `__pycache__` into
+  `.specify/extensions/guardians/` (the launcher sets `sys.dont_write_bytecode`), so `git add .specify` stays clean.
 - **GitHub Action**: the three siblings' actions (pinned) plus `guardians verify`, each switchable.
 - **`tools/check-family.py`**: the consistency check across the four repositories (pins, catalogs, the siblings'
   CI refs, version ranges, fixtures, read-only defaults, launcher parity, the Spec Kit floor, README links);
-  CI runs it against the siblings at the pinned tags.
+  CI runs it against the siblings' `main` branches (the fixtures against the templates at the pinned tags).
 - **[docs/getting-started.md](docs/getting-started.md)**: the step-by-step guide for a first project, and
   `CONTRIBUTING.md` with the release order of the family; `CODEOWNERS`, `SECURITY.md`, Dependabot.
 - Tests on the siblings' real config templates; an end-to-end run against a real Spec Kit install

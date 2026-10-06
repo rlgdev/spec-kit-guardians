@@ -112,7 +112,7 @@ the file, the key and the fix, so that a wrong `git.base` or a missing preset is
 run.
 
 *Acceptance.* **Given** archiGuard `git.base: main` and auditGuard `golden.git.base: develop`, **when**
-`guardians verify` runs, **then** it prints `[FAIL] git_base_agrees : archiguard git.base=main,
+`guardians verify` runs, **then** it prints `[FAIL] git_base_agrees             archiguard git.base=main,
 auditguard golden.git.base=develop` with both file paths and exits `1`.
 
 ### US4 — One required check in CI (P2)

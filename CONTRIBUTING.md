@@ -28,7 +28,8 @@ sibling's own version; every catalog entry equals the sibling's own catalog entr
 the Guardians refs equal the bundle pins; archiGuard's and auditGuard's version ranges accept the pinned
 versions; the fixtures under `tests/fixtures/` are the siblings' current config templates; the launchers of all
 four carry the same interpreter search; every README names its own current release. CI runs it against the
-siblings at the pinned tags (falling back to `main` for a tag that does not exist yet).
+siblings' `main` branches (the fixtures against the templates at the pinned tags): a sibling that bumps its
+version on `main` turns the job red until the pins here follow it (step 5 of the sibling's `CONTRIBUTING.md`).
 
 ## Conventions
 

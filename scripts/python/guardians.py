@@ -9,6 +9,9 @@ Standard library only, Python 3.9+. Exit codes: 0 ok, 1 verify found a failure, 
 import sys
 from pathlib import Path
 
+# The engine lives in .specify/extensions/guardians/, which the project commits: never write __pycache__ there.
+sys.dont_write_bytecode = True
+
 if sys.version_info < (3, 9):
     sys.stderr.write("Guardians: ERROR: Python 3.9 or newer is required\n")
     sys.exit(2)

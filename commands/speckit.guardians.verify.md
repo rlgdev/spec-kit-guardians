@@ -24,5 +24,5 @@ hooks first and last on shared events, one base branch, the edit guard covering 
 1. Run `{SCRIPT}` from the repository root and show the output as is. Exit code `0` = aligned (warnings
    possible); `1` = at least one `[FAIL]`.
 2. For every `[WARN]` and `[FAIL]`, quote its `fix:` line. When the fix is `guardians configure`, offer to run
-   `/speckit.guardians.configure`; when it names two files that disagree, the user decides.
+   `__SPECKIT_COMMAND_GUARDIANS_CONFIGURE__`; when it names two files that disagree, the user decides.
 3. Never edit the three tools' config files or `.specify/extensions.yml` to make a finding go away.

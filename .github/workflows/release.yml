@@ -36,7 +36,7 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install pytest pyyaml && python -m pytest -q
       - name: build the archives
-        run: python tools/build.py --check-tag "$TAG" && python tools/build.py
+        run: python tools/build.py --check-tag "$TAG"
       - name: publish release assets
         env:
           GH_TOKEN: ${{ github.token }}

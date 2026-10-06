@@ -82,7 +82,7 @@ def test_check_family_help():
 
 
 @pytest.mark.skipif(not all(os.environ.get(f"{e}_SRC") for e in ("SCOPEGUARD", "ARCHIGUARD", "AUDITGUARD")),
-                    reason="SCOPEGUARD_SRC, ARCHIGUARD_SRC and AUDITGUARD_SRC checkouts needed")
+                    reason="SCOPEGUARD_SRC, ARCHIGUARD_SRC and AUDITGUARD_SRC checkouts needed (CI runs check-family in the family job)")
 def test_check_family_passes_on_the_siblings():
     proc = run(str(REPO / "tools" / "check-family.py"))
     assert proc.returncode == 0, proc.stdout + proc.stderr

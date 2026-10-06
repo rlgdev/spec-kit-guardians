@@ -77,7 +77,7 @@ runs:
         fi
         echo "Guardians: verify"
         set +e
-        "$PY" "$engine" verify | tee guardians-verify.txt; code=${PIPESTATUS[0]}
+        "$PY" "$engine" verify 2>&1 | tee guardians-verify.txt; code=${PIPESTATUS[0]}
         set -e
         if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
           { echo '## Guardians verify'; echo; echo '```text'; cat guardians-verify.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

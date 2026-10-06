@@ -87,17 +87,16 @@ jobs:
         with:
           python-version: "3.13"
       - run: python -m pip install pyyaml
-      - name: the siblings at the bundle's pins (main for a tag that does not exist yet)
+      - name: the siblings' main branches, with the pinned tag fetched for the fixture comparison
         shell: bash
         run: |
+          # main: the launchers, CI refs and READMEs are compared as they are now; the fixtures against the
+          # template at the pinned tag (check-family reads it with `git show v<pin>:config-template.yml`)
           for ext in scopeguard archiguard auditguard; do
             ref_var="$(echo "$ext" | tr a-z A-Z)_REF"; ref="${!ref_var}"
-            if git ls-remote --exit-code --tags "https://github.com/rlgdev/spec-kit-$ext" "refs/tags/$ref" >/dev/null 2>&1; then
-              git -c advice.detachedHead=false clone -q --depth 1 --branch "$ref" "https://github.com/rlgdev/spec-kit-$ext" "$RUNNER_TEMP/$ext"
-            else
-              echo "::notice title=family check::rlgdev/spec-kit-$ext has no tag $ref yet - checking against main"
-              git clone -q --depth 1 "https://github.com/rlgdev/spec-kit-$ext" "$RUNNER_TEMP/$ext"
-            fi
+            git clone -q --depth 1 "https://github.com/rlgdev/spec-kit-$ext" "$RUNNER_TEMP/$ext"
+            git -C "$RUNNER_TEMP/$ext" fetch -q --depth 1 origin "refs/tags/$ref:refs/tags/$ref" 2>/dev/null \
+              || echo "::notice title=family check::rlgdev/spec-kit-$ext has no tag $ref yet - the fixture is compared with main"
           done
       - run: python tools/check-family.py --scopeguard-src "$RUNNER_TEMP/scopeguard" --archiguard-src "$RUNNER_TEMP/archiguard" --auditguard-src "$RUNNER_TEMP/auditguard"
 

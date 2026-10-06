@@ -27,7 +27,7 @@ Run each line. If one fails, fix it before going on; nothing below works without
 | Python 3.9 or newer | `python3 --version` (Windows: `python --version`) | install Python from python.org or your package manager. On Windows, do **not** rely on the Microsoft Store `python3` alias: the launchers skip it |
 | git 2.20 or newer | `git --version` | install git |
 | Spec Kit 1.0.1 or newer | `specify version` | `uv tool install specify-cli` (or `pip install specify-cli`); upgrade with `uv tool upgrade specify-cli` |
-| a Spec Kit project | `ls .specify/` prints `extensions` ... | `specify init <name> --integration claude` (or your agent), then `cd` into it |
+| a Spec Kit project | `ls .specify/` prints `memory`, `scripts` and `templates` (`extensions/` only appears after the first install in step 1) | `specify init <name> --integration claude` (or your agent), then `cd` into it |
 | the project is a git repository, at its root | `git rev-parse --show-toplevel` prints the project directory | `git init -b main`; auditGuard's git checks need the project root to be the repository root |
 | an agent integration | `.claude/` (Claude Code), `.github/` (Copilot), ... exists in the project | pick one at `specify init`; the gates themselves run without an agent, from the shell |
 
@@ -48,12 +48,13 @@ specify bundle catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-
 specify bundle install guardians
 ```
 
-Spec Kit asks you to confirm installs from a URL: answer `y`. **Expected:** `specify extension list` shows
+**Expected:** `specify extension list` shows
 `scopeguard`, `archiguard`, `auditguard` and `guardians`; `specify preset list` shows `archiguard-templates`.
 
 > **Not available yet?** The bundle resolves its components through GitHub release assets. Until **auditGuard
 > `v0.1.0`** and **Guardians `v0.1.0`** are published (scopeGuard `v0.4.0` and archiGuard `v0.1.0` are), `bundle
-> install` fails downloading them. Use path B meanwhile; the result is identical.
+> install` fails downloading them, and so do the `auditguard.zip` and `guardians.zip` lines of path B. Use path
+> B's checkout variant (`--dev`) meanwhile; the result is identical.
 
 ### Path B: one extension at a time
 
@@ -66,6 +67,9 @@ specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases
 specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
 specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.0/guardians.zip
 ```
+
+Spec Kit asks you to confirm each `specify extension add --from` install (`Continue with installation? [y/N]`): answer `y`.
+The preset install does not ask.
 
 Or, for a release that does not exist yet, from checkouts of the repositories (`--dev` installs the checkout as
 it is; the same works with the `dist/<id>.zip` that `python tools/build.py` builds in each checkout):
@@ -144,18 +148,21 @@ standards repository pinned by tag.
 
 ```bash
 A=.specify/extensions/archiguard/scripts/bash/archiguard.sh
-bash $A scaffold rulebook       # no standards yet? starting files under .specify/standards/
-bash $A scaffold domain-map
+bash $A scaffold rulebook --out .specify/standards   # no standards yet? starting files where standards.path points (run it first)
+bash $A scaffold domain-map                          # -> .specify/standards/domain-map.yaml
 ```
 
-Then in `.specify/extensions/archiguard/archiguard-config.yml` set:
+Then in `.specify/extensions/archiguard/archiguard-config.yml` set the values of **your** standards repository.
+`resolve` refuses a name or tag that differs from its `rulebook.yml`, and A0.1 fails when `pin` differs from the
+map's `domain_map_version`. For the scaffolded starting files they are `example-standards@v0.1.0`, `java-service`
+and `"1.0.0"`:
 
 ```yaml
 standards:
-  rulebook: acme-standards@v2026.10.1    # <name>@<tag> of the standards repository
-  profile: java-service                  # the central rule set for this stack
+  rulebook: acme-standards@v2026.10.1    # <name>@<tag>: the name and version in rulebook.yml of the standards repository
+  profile: java-service                  # the central rule set for this stack (profiles/<name>.yml)
 domain:
-  pin: "1.4.0"                           # the domain map version this repository follows
+  pin: "1.4.0"                           # the domain_map_version of the domain map this repository follows
 ```
 
 and resolve the lock (commit it; CI re-resolves and fails on drift):
@@ -210,6 +217,9 @@ Use Spec Kit as before. What changes:
   the gates, with a bounded repair loop). The agent repairs what the gates find; when it cannot within the
   budget (default 3 iterations), it stops and writes an escalation note (`specs/<feature>/gates/escalation-*.md`,
   `scopeguard-escalation-*.md`) with the decision it needs from you.
+- `/speckit.plan` also needs the feature's handover record, `specs/<feature>/handover.yml` (written by the formal
+  handover from the BA specification tool; `archiguard scaffold handover --feature-dir specs/<feature>` gives a
+  starting file). Without it, step A stops with `cannot evaluate` (exit `2`), exactly like a missing lock.
 - `/speckit.analyze` saves its report for the A3.6 check; `/speckit.implement` starts only on a **signed design**.
 - Every command is recorded in `audit/` with the hashes of what it touched. Commit `audit/` with your work.
 
@@ -224,16 +234,20 @@ bash $A reopen  --by "Lead architect" --reason "..."   # a design change after t
 bash $A ledger add --id ADR-0042 --type adr --title "..." --owner "..." --status approved --approver "..."
 bash $U decide escalation:<note> accept --by "Your Name" --reason "..."   # answer an escalation
 bash $U check                                     # the completeness rules of the open sprint
-bash $U sprint close S-2026-41 --by "Your Name"   # seal the sprint, then: anchor --push, export
+bash $U sprint close S-2026-41 --by "Your Name"   # seal the sprint; then commit audit/ and anchor it:
+git add audit && git commit -m "Close sprint S-2026-41"
+bash $U anchor --sprint S-2026-41 --push          # note on HEAD + annotated tag audit/S-2026-41, pushed
+bash $U export --sprint S-2026-41                 # audit-pack-S-2026-41.zip, verifies offline with `verify --pack`
 ```
 
 A five-minute smoke test on a fresh project, without an agent:
 
 ```bash
-bash .specify/scripts/bash/create-new-feature.sh --json --short-name demo "Demo feature"   # a feature branch and specs/001-demo/
+bash .specify/scripts/bash/create-new-feature.sh --json --short-name demo "Demo feature"   # specs/001-demo/ and .specify/feature.json (no git branch)
 #   write specs/001-demo/spec.md with one "### User Story 1 - ..." and one "- **FR-001**: ..."
 bash .specify/extensions/scopeguard/scripts/bash/scopeguard.sh inventory         # the scope contract
-bash .specify/extensions/archiguard/scripts/bash/archiguard.sh run plan a        # step A: PASS, or what is missing (lock, map)
+bash .specify/extensions/archiguard/scripts/bash/archiguard.sh scaffold handover --feature-dir specs/001-demo   # A0 reads specs/001-demo/handover.yml
+bash .specify/extensions/archiguard/scripts/bash/archiguard.sh run plan a        # step A: PASS, or 'cannot evaluate' naming what is missing (handover record, lock, map, pin)
 bash .specify/extensions/auditguard/scripts/bash/auditguard.sh show --all        # the events recorded so far
 bash .specify/extensions/guardians/scripts/bash/guardians.sh verify              # RESULT: OK
 ```
@@ -292,7 +306,7 @@ READMEs have Bitbucket Pipelines examples.
 | `specs/<feature>/.scopeguard/`, `scopeguard-escalation-*.md` | scopeGuard's iteration history and escalations | the history is transient; the escalation note until decided |
 | `audit/` | auditGuard; **never** by hand or by the agent | yes, always |
 | `.gitattributes` | `auditguard configure` adds three lines | yes |
-| `.specify/extensions/<id>/local-config.yml` | you, for workstation-only overrides | no (CI ignores it) |
+| `.specify/extensions/<id>/local-config.yml` (scopeGuard, archiGuard, auditGuard; Guardians has none) | you, for workstation-only overrides | no (archiGuard and auditGuard ignore it in CI; scopeGuard reads it everywhere) |
 
 The config files, with their full reference: [scopeGuard](https://github.com/rlgdev/spec-kit-scopeguard/blob/main/config-template.yml)
 (`scopeguard-config.yml`), [archiGuard](https://github.com/rlgdev/spec-kit-archiguard/blob/main/docs/configuration.md)
@@ -306,7 +320,9 @@ next release rejects unknown keys as well.
 
 Environment variables for one run: `SCOPEGUARD_PYTHON` / `ARCHIGUARD_PYTHON` / `AUDITGUARD_PYTHON` /
 `GUARDIANS_PYTHON` (the interpreter to use), `SCOPEGUARD_MODE=report`, `ARCHIGUARD_INTEGRATION`,
-`ARCHIGUARD_MAX_ITERATIONS`, `AUDITGUARD_ACTOR`. CI (`CI=true`) ignores the overrides.
+`ARCHIGUARD_MAX_ITERATIONS`, `AUDITGUARD_ACTOR`. With `CI=true`, archiGuard ignores `local-config.yml` and its
+`ARCHIGUARD_*` overrides, and auditGuard ignores `local-config.yml` and `AUDITGUARD_INTEGRATION` (`AUDITGUARD_MODE`
+and `AUDITGUARD_ACTOR` still apply); scopeGuard applies `local-config.yml` and `SCOPEGUARD_MODE` in CI too.
 
 ---
 
@@ -317,8 +333,8 @@ Environment variables for one run: `SCOPEGUARD_PYTHON` / `ARCHIGUARD_PYTHON` / `
 | `scopeGuard: ERROR: no Python 3.9+ interpreter found` (any tool) | nothing usable on PATH | install Python, or set `<ID>_PYTHON=/path/to/python`; with `uv` installed the launchers also use specify-cli's Python |
 | the gate runs twice in `/speckit.plan` | both the inline step and a hook are on, or both presets are installed | `guardians verify` names it; `specify preset remove scopeguard-templates`, then `guardians configure` |
 | `/speckit.plan` says `skipped` for the gates | the wrapped step is off because the config says `hooks`, or the other way round | `guardians configure` (it runs every tool's configure); `[WARN] hooks_match_integration` names the tool |
-| `cannot evaluate` (exit 2) in archiGuard step A | no standards lock, no domain map pin, or a pin that moved | step 3.1; the message names the file |
-| `A4.1 ... no design sign-off` on `/speckit.implement` | implement starts only on a signed design | `archiguard signoff --by ...` after plan, tasks and analyze are green |
+| `cannot evaluate` (exit 2) in archiGuard step A | no handover record (`specs/<feature>/handover.yml`), no standards lock, no domain map, or `domain.pin` not set | step 3.1 for the standards, the lock and the pin; `archiguard scaffold handover --feature-dir specs/<feature>` for the record (in a real project the BA handover writes it); the message names the file |
+| `[A4.1] A4.1 - no design authority sign-off is recorded for this feature` on `/speckit.implement` (exit 3) | implement starts only on a signed design | `archiguard signoff --by ...` on the feature branch, after plan, tasks and analyze are green and the design is committed |
 | `auditguard check` reports `_unassigned` events | no sprint was open | open a sprint (3.2); the events stay where they are, as a record |
 | `auditguard verify` fails `G3 unexplained_commit` | a commit touched a design artefact or code outside any recorded command (a hand edit, hooks skipped) | that is the finding; the audit trail now shows the author. Decide it with `auditguard decide` or `note` |
 | `guardians verify` exits `2` with `cannot read YAML` | no PyYAML and no sibling installed | `python -m pip install pyyaml`, or run with specify-cli's Python (`GUARDIANS_PYTHON`) |

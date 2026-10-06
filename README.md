@@ -199,8 +199,9 @@ check, each switchable:
     # scopeguard: "false"  archiguard: "false"  auditguard: "false"  verify: "false"  to skip a part
 ```
 
-The verify output goes to the job summary. The siblings' actions use the engine the project installed
-(`.specify/extensions/<id>/`), falling back to their own. GitHub resolves every action a composite action uses
+The verify output goes to the job summary. archiGuard's and auditGuard's actions use the engine the project installed
+(`.specify/extensions/<id>/`), falling back to their own; scopeGuard's action at the pinned `v0.4.0` runs its own engine
+(it still reads the project's `scopeguard-config.yml`). GitHub resolves every action a composite action uses
 before it runs, so this action needs the three siblings released at the bundle's pins (`rlgdev/spec-kit-<id>@v<pin>`);
 until then use the siblings' actions directly and run `guardians verify` as a plain step.
 

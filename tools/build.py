@@ -113,6 +113,12 @@ def versions() -> Tuple[str, List[str]]:
     for command in re.findall(r"file:\s*(commands/[^\s}]+)", manifest):
         if not (ROOT / command).is_file():
             problems.append(f"extension.yml names a command file that does not exist: {command}")
+    for template in re.findall(r'template:\s*"?([^"\s]+)"?', manifest):
+        if not (ROOT / template).is_file():
+            problems.append(f"extension.yml names a config template that does not exist: {template}")
+    for name in EXTENSION_FILES:
+        if not (ROOT / name).is_file():
+            problems.append(f"release file missing: {name}")
     if first(r"^\s+id:\s*(\S+)", manifest, "extension.yml id") != "guardians":
         problems.append("extension.yml id is not guardians (rename everywhere, or change this check)")
     return found["extension.yml"], problems
@@ -120,6 +126,7 @@ def versions() -> Tuple[str, List[str]]:
 
 def add_file(zf: zipfile.ZipFile, source: Path, arcname: str) -> None:
     info = zipfile.ZipInfo(arcname, date_time=FIXED_DATE)
+    info.create_system = 3  # Unix 'made by' on every platform: the modes apply and the hash does not depend on the build OS
     executable = source.suffix in (".sh", ".py") and "scripts" in source.parts
     info.external_attr = ((0o100755 if executable else 0o100644) & 0xFFFF) << 16
     info.compress_type = zipfile.ZIP_DEFLATED
