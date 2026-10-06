@@ -1,0 +1,94 @@
+# scopeGuard configuration
+#
+# Location: .specify/extensions/scopeguard/scopeguard-config.yml
+# Personal overrides (not committed): .specify/extensions/scopeguard/local-config.yml
+#
+# After changing `integration` or switching a gate on/off, apply it to Spec Kit's hooks:
+#     /speckit.scopeguard.configure        (or: bash .specify/extensions/scopeguard/scripts/bash/scopeguard.sh configure)
+# Everything else takes effect on the next run. Every key is optional; the values below are the defaults.
+
+# ── How the gates run ────────────────────────────────────────────────────────
+# inline : the scope gate is a mandatory step INSIDE /speckit.plan and /speckit.tasks
+#          (no separate command). Needs the scopeguard-templates preset; without it
+#          scopeGuard falls back to `hooks` automatically.
+# hooks  : the gate runs as separate scopeGuard commands (/speckit.scopeguard.plan,
+#          /speckit.scopeguard.tasks) triggered by Spec Kit's after_plan / after_tasks hooks.
+# embedded: no hooks and no inline steps. The gates run only when another tool calls
+#          scopeGuard's command line, for example archiGuard's gate runner, which then owns
+#          the iteration budget. Do not install the scopeguard-templates preset with it.
+integration: inline
+
+# ── Autocorrect ──────────────────────────────────────────────────────────────
+autocorrect:
+  # true : when a gate finds missing user stories or requirements, the agent fixes
+  #        plan.md / tasks.md itself and re-checks.
+  # false: the gate only reports what is missing and stops the command.
+  enabled: true
+  # How many fix-and-recheck iterations the agent gets. If items are still missing
+  # after the last one, the gate stops, writes scopeguard-escalation-<gate>.md into
+  # the feature directory and the agent comes back to you with the problem description.
+  max_iterations: 4
+
+# enforce: violations stop the command / fail CI.
+# report : gates never fail, they only measure (useful for labs and trials).
+#          Also per run: SCOPEGUARD_MODE=report or --report-only.
+mode: enforce
+
+# ── Gates ────────────────────────────────────────────────────────────────────
+plan:
+  enabled: true
+  # Heading (substring match) of the coverage table in plan.md.
+  section: Scope Coverage
+  # false: when plan.md has no coverage table, fall back to "the ID is mentioned
+  # somewhere in plan.md" (weaker, but works without the preset).
+  require_section: true
+  # false: only user stories must appear in the plan table.
+  check_requirements: true
+  require_reason_for_waiver: true
+  # true: a "covered" row with an empty "Plan reference" cell is a violation
+  # (default: a warning).
+  require_reference_for_covered: false
+
+tasks:
+  enabled: true
+  # Optional table in tasks.md that maps IDs to task IDs (added by the preset).
+  section: Scope Coverage
+  # false: only user stories must be carried by tasks.
+  check_requirements: true
+  # Tasks without a [USn] label inherit the story of the phase heading they sit
+  # under ("## Phase 3: User Story 1 - ...").
+  inherit_story_from_phase: true
+  require_reason_for_waiver: true
+
+implement:
+  # The optional after_implement check (every carrying task checked off).
+  enabled: true
+  check_requirements: true
+
+# ── What counts as scope ─────────────────────────────────────────────────────
+ids:
+  # The key of story IDs. US = Spec Kit user stories ("### User Story 1 - ...", US1, task labels [US1]).
+  # Another key traces another kind of story, e.g. UC for use cases ("### UC-001 - ...", task labels [UC-001]).
+  story_key: US
+  # Long name of a story in spec headings and tasks.md phase titles, e.g. "Use Case".
+  # null = "User Story" for the key US, none for other keys.
+  story_name: null
+  # Regex matched at the start of spec.md heading text (case-insensitive); group 1 captures the
+  # story number. null = derived from story_key and story_name.
+  story_pattern: null
+  # Requirement ID prefixes that are part of the traced scope.
+  # Add SC to also trace Success Criteria (SC-001, ...).
+  requirement_prefixes: [FR, NFR]
+
+spec:
+  # A spec without any user story cannot be traced; treat it as a violation.
+  require_stories: true
+
+# IDs referenced in plan.md / tasks.md that spec.md does not define
+# (renumbered, invented or stale scope): violation | warning | ignore
+unknown_ids: violation
+
+features:
+  # Glob patterns of feature directory names that --all skips,
+  # e.g. features planned before scopeGuard was introduced.
+  exclude: []

@@ -1,0 +1,86 @@
+name: "Guardians for Spec Kit"
+description: "One required check for the Guardians family: scopeGuard, archiGuard and auditGuard's own checks, then the alignment of their configurations"
+author: "rlgdev"
+branding:
+  icon: "shield"
+  color: "purple"
+
+inputs:
+  scopeguard:
+    description: "Run scopeGuard's check (every in-scope item in plan and tasks)"
+    required: false
+    default: "true"
+  archiguard:
+    description: "Run archiGuard's CI check (every gate on the final commit, lock drift, the ledger)"
+    required: false
+    default: "true"
+  auditguard:
+    description: "Run auditGuard's verify (chains, seals, evidence; the golden sources with auditguard-golden)"
+    required: false
+    default: "true"
+  auditguard-golden:
+    description: "auditGuard: also check the golden sources (needs the full history: fetch-depth 0, notes and tags)"
+    required: false
+    default: "true"
+  verify:
+    description: "Run guardians verify (the three configurations agree)"
+    required: false
+    default: "true"
+  features:
+    description: "'all' or one feature directory such as specs/001-my-feature (passed to the gates)"
+    required: false
+    default: "all"
+  working-directory:
+    description: "Spec Kit project root (the directory that contains .specify/)"
+    required: false
+    default: "."
+
+runs:
+  using: "composite"
+  steps:
+    - name: scopeGuard
+      if: ${{ inputs.scopeguard == 'true' }}
+      uses: rlgdev/spec-kit-scopeguard@v0.4.0
+      with:
+        command: check
+        features: ${{ inputs.features }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - name: archiGuard
+      if: ${{ inputs.archiguard == 'true' }}
+      uses: rlgdev/spec-kit-archiguard@v0.1.0
+      with:
+        features: ${{ inputs.features }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - name: auditGuard
+      if: ${{ inputs.auditguard == 'true' }}
+      uses: rlgdev/spec-kit-auditguard@v0.1.0
+      with:
+        command: verify
+        golden: ${{ inputs.auditguard-golden }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - name: Guardians verify
+      if: ${{ inputs.verify == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GD_ACTION_ENGINE: ${{ github.action_path }}/scripts/python/guardians.py
+      run: |
+        set -euo pipefail
+        PY=python3
+        command -v python3 >/dev/null 2>&1 && python3 -c 'import sys' >/dev/null 2>&1 || PY=python
+        engine="$GD_ACTION_ENGINE"
+        if [ -f .specify/extensions/guardians/scripts/python/guardians.py ]; then
+          engine=.specify/extensions/guardians/scripts/python/guardians.py
+        fi
+        echo "Guardians: verify"
+        set +e
+        "$PY" "$engine" verify | tee guardians-verify.txt; code=${PIPESTATUS[0]}
+        set -e
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+          { echo '## Guardians verify'; echo; echo '```text'; cat guardians-verify.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+        fi
+        rm -f guardians-verify.txt
+        exit $code

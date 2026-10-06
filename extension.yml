@@ -1,0 +1,43 @@
+schema_version: "1.0"
+
+extension:
+  id: guardians
+  name: "Guardians"
+  version: "0.1.0"
+  description: "One cover for scopeGuard, archiGuard and auditGuard: configures the three in order, cross-wires what each needs from the others, orders their hooks and verifies that their configurations agree"
+  author: "rlgdev"
+  repository: https://github.com/rlgdev/spec-kit-guardians
+  homepage: https://github.com/rlgdev/spec-kit-guardians
+  license: MIT
+  category: process
+  effect: read-write          # writes only: hook priorities in .specify/extensions.yml, scopeGuard's `integration`, archiGuard's `edit_guard.always_readonly`
+
+requires:
+  # 1.0.1: what archiGuard and auditGuard need (agent-native runtime events, hooks on all commands); bundles exist since 0.11.4
+  speckit_version: ">=1.0.1"
+  tools:
+    - name: python
+      version: ">=3.9"
+      required: false
+      description: "Runs the configurator (standard library; YAML through PyYAML or a sibling's reader). Without python on PATH the launchers use the Python bundled with specify-cli, or uv."
+
+provides:
+  commands:
+    - name: speckit.guardians.configure
+      file: commands/speckit.guardians.configure.md
+      description: "Configure scopeGuard, archiGuard and auditGuard together: run their configures in order, cross-wire them, order their hooks, show what is in force"
+    - name: speckit.guardians.verify
+      file: commands/speckit.guardians.verify.md
+      description: "Check that the three Guardians' configurations agree (versions, integration, hook order, git base, edit guard, CODEOWNERS)"
+  config:
+    - name: "guardians-config.yml"
+      template: "config-template.yml"
+      description: "Configure order, hook priorities, check severities (optional - defaults apply)"
+      required: false
+
+tags:
+  - "governance"
+  - "architecture"
+  - "scope"
+  - "audit"
+  - "quality-gate"

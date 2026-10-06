@@ -1,0 +1,34 @@
+# Guardians configuration (optional - these are the defaults)
+#
+# Location: .specify/extensions/guardians/guardians-config.yml  (committed)
+# Apply:    bash .specify/extensions/guardians/scripts/bash/guardians.sh configure   (or /speckit.guardians.configure)
+# Check:    bash .specify/extensions/guardians/scripts/bash/guardians.sh verify      (or /speckit.guardians.verify)
+#
+# Guardians changes none of the three tools' own settings except what each documents as required for the
+# others: scopeGuard `integration: embedded` under archiGuard, archiGuard's edit guard covering the audit trail,
+# and the order of hooks they share. Everything else is only compared, by `verify`.
+version: 1
+
+# The siblings' own configure commands run in this order.
+order: [scopeguard, archiguard, auditguard]
+
+# Hook priorities written into .specify/extensions.yml (lower runs first; Spec Kit's default is 10).
+# auditGuard records first (before_*) and last (after_*) on an event it shares with a gate.
+hook_priority:
+  auditguard: { before: 1, after: 90 }
+  default: 10                      # scopeGuard and archiGuard entries without a priority get this one
+
+# Severity of each verify check: fail (exit 1) | warn (reported, exit 0) | off
+checks:
+  installed: fail                  # the four extensions are installed
+  preset_matches_integration: fail # archiguard-templates present iff archiGuard runs inline; no scopeguard-templates
+  versions_in_range: fail          # the siblings accept each other's installed versions
+  scopeguard_embedded: fail        # scopeGuard is embedded when archiGuard runs the scope gate
+  auditguard_integration: warn     # auditGuard integration is hooks or workflow
+  hook_order: fail                 # auditGuard first and last on shared events
+  hooks_match_integration: warn    # enabled hooks only for a tool whose integration is hooks
+  git_base_agrees: fail            # archiGuard git.base == auditGuard golden.git.base
+  edit_guard_covers_audit: fail    # archiGuard's edit guard protects the audit trail too
+  modes_agree: warn                # scopeGuard mode == archiGuard mode
+  gitattributes: warn              # auditGuard's .gitattributes lines are present
+  codeowners: warn                 # CODEOWNERS (when present) names owners for audit/, standards, archiguard, extensions

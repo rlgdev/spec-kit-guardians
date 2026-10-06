@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0",
+  "updated_at": "2026-10-06T16:00:00Z",
+  "catalog_url": "https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/extensions.json",
+  "extensions": {
+    "scopeguard": {
+      "name": "scopeGuard",
+      "id": "scopeguard",
+      "description": "Deterministic scope gates that find and resolve user stories or requirements from spec.md dropped by plan or tasks, and escalate with a problem report when they cannot.",
+      "author": "rlgdev",
+      "version": "0.4.0",
+      "download_url": "https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.0/scopeguard.zip",
+      "repository": "https://github.com/rlgdev/spec-kit-scopeguard",
+      "homepage": "https://github.com/rlgdev/spec-kit-scopeguard",
+      "documentation": "https://github.com/rlgdev/spec-kit-scopeguard/blob/main/README.md",
+      "changelog": "https://github.com/rlgdev/spec-kit-scopeguard/blob/main/CHANGELOG.md",
+      "license": "MIT",
+      "category": "process",
+      "effect": "read-write",
+      "requires": {
+        "speckit_version": ">=0.12.17"
+      },
+      "provides": {
+        "commands": 7,
+        "hooks": 5
+      },
+      "tags": ["scope", "traceability", "coverage", "quality-gate", "requirements"],
+      "verified": false,
+      "downloads": 0,
+      "stars": 0,
+      "created_at": "2026-10-05T00:00:00Z",
+      "updated_at": "2026-10-06T08:00:00Z"
+    },
+    "archiguard": {
+      "name": "archiGuard",
+      "id": "archiguard",
+      "description": "Architecture gates for Spec Kit: A0 domain guard, A3 plan conformance, A4 fitness functions and the handover 4->5, with one gate runner, per-step iteration budgets and standards bound through a lock file.",
+      "author": "rlgdev",
+      "version": "0.1.0",
+      "download_url": "https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.0/archiguard.zip",
+      "repository": "https://github.com/rlgdev/spec-kit-archiguard",
+      "homepage": "https://github.com/rlgdev/spec-kit-archiguard",
+      "documentation": "https://github.com/rlgdev/spec-kit-archiguard/blob/main/README.md",
+      "changelog": "https://github.com/rlgdev/spec-kit-archiguard/blob/main/CHANGELOG.md",
+      "license": "MIT",
+      "category": "process",
+      "effect": "read-write",
+      "requires": {
+        "speckit_version": ">=1.0.1"
+      },
+      "provides": {
+        "commands": 11,
+        "hooks": 6,
+        "events": 2
+      },
+      "tags": ["architecture", "governance", "quality-gate", "fitness-functions", "domain-driven-design"],
+      "verified": false,
+      "downloads": 0,
+      "stars": 0,
+      "created_at": "2026-10-05T00:00:00Z",
+      "updated_at": "2026-10-05T20:00:00Z"
+    },
+    "auditguard": {
+      "name": "auditGuard",
+      "id": "auditguard",
+      "description": "Tamper-evident audit trail of the Spec Kit SDLC: every command by stage, the gate reports of scopeGuard and archiGuard, the waiver history, human decisions and changes outside recorded commands, per sprint and feature, verifiable against git and the other golden sources.",
+      "author": "rlgdev",
+      "version": "0.1.0",
+      "download_url": "https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip",
+      "repository": "https://github.com/rlgdev/spec-kit-auditguard",
+      "homepage": "https://github.com/rlgdev/spec-kit-auditguard",
+      "documentation": "https://github.com/rlgdev/spec-kit-auditguard/blob/main/README.md",
+      "changelog": "https://github.com/rlgdev/spec-kit-auditguard/blob/main/CHANGELOG.md",
+      "license": "MIT",
+      "category": "process",
+      "effect": "read-write",
+      "requires": {
+        "speckit_version": ">=1.0.1"
+      },
+      "provides": {
+        "commands": 28,
+        "hooks": 20,
+        "events": 4
+      },
+      "tags": ["audit", "traceability", "governance", "compliance", "human-in-the-loop"],
+      "verified": false,
+      "downloads": 0,
+      "stars": 0,
+      "created_at": "2026-10-06T00:00:00Z",
+      "updated_at": "2026-10-06T12:00:00Z"
+    },
+    "guardians": {
+      "name": "Guardians",
+      "id": "guardians",
+      "description": "One cover for scopeGuard, archiGuard and auditGuard: configures the three in order, cross-wires what each needs from the others, orders their hooks and verifies that their configurations agree.",
+      "author": "rlgdev",
+      "version": "0.1.0",
+      "download_url": "https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.0/guardians.zip",
+      "repository": "https://github.com/rlgdev/spec-kit-guardians",
+      "homepage": "https://github.com/rlgdev/spec-kit-guardians",
+      "documentation": "https://github.com/rlgdev/spec-kit-guardians/blob/main/README.md",
+      "changelog": "https://github.com/rlgdev/spec-kit-guardians/blob/main/CHANGELOG.md",
+      "license": "MIT",
+      "category": "process",
+      "effect": "read-write",
+      "requires": {
+        "speckit_version": ">=1.0.1"
+      },
+      "provides": {
+        "commands": 2
+      },
+      "tags": ["governance", "architecture", "scope", "audit", "quality-gate"],
+      "verified": false,
+      "downloads": 0,
+      "stars": 0,
+      "created_at": "2026-10-06T00:00:00Z",
+      "updated_at": "2026-10-06T16:00:00Z"
+    }
+  }
+}

@@ -1,0 +1,166 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # the siblings' checkouts for the YAML-fallback test and the e2e; the e2e falls back to main when a tag is missing
+  SCOPEGUARD_REF: v0.4.0
+  ARCHIGUARD_REF: v0.1.0
+  AUDITGUARD_REF: v0.1.0
+
+jobs:
+  test:
+    name: tests (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest pyyaml
+      - name: auditGuard checkout for the YAML-fallback test
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --tags https://github.com/rlgdev/spec-kit-auditguard "refs/tags/$AUDITGUARD_REF" >/dev/null 2>&1; then
+            git clone -q --depth 1 --branch "$AUDITGUARD_REF" https://github.com/rlgdev/spec-kit-auditguard "$RUNNER_TEMP/auditguard"
+          else
+            git clone -q --depth 1 https://github.com/rlgdev/spec-kit-auditguard "$RUNNER_TEMP/auditguard"
+          fi
+      - name: pytest
+        shell: bash
+        run: AUDITGUARD_SRC="$RUNNER_TEMP/auditguard" python -m pytest -q -rs --junitxml=pytest-report.xml
+      - name: failing tests as annotations
+        if: failure()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          for case in ET.parse("pytest-report.xml").getroot().iter("testcase"):
+              for bad in list(case.findall("failure")) + list(case.findall("error")):
+                  text = ((bad.get("message") or "") + "\n" + (bad.text or ""))[-3000:]
+                  text = text.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+                  print(f"::error title={case.get('classname')}.{case.get('name')}::{text}")
+          PY
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pyflakes pyyaml
+      - run: python -m pyflakes scripts/python tools tests
+      - run: shellcheck scripts/bash/guardians.sh tools/e2e-speckit.sh
+      - run: python tools/build.py --check
+      - name: the catalogs are valid JSON with the expected ids
+        run: |
+          python - <<'PY'
+          import json
+          ext = json.load(open("catalog/extensions.json"))["extensions"]
+          assert set(ext) == {"scopeguard", "archiguard", "auditguard", "guardians"}, set(ext)
+          assert set(json.load(open("catalog/presets.json"))["presets"]) == {"archiguard-templates"}
+          assert set(json.load(open("catalog/bundles.json"))["bundles"]) == {"guardians"}
+          print("catalogs ok")
+          PY
+
+  launchers:
+    name: launchers (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - name: bash launcher
+        shell: bash
+        run: |
+          bash scripts/bash/guardians.sh version | grep -q "Guardians 0."
+          set +e; bash scripts/bash/guardians.sh verify; code=$?; set -e
+          test "$code" -eq 2   # no Spec Kit project here
+      - name: PowerShell launcher
+        shell: pwsh
+        run: |
+          $out = & ./scripts/powershell/guardians.ps1 version
+          if ($LASTEXITCODE -ne 0 -or "$out" -notmatch 'Guardians 0\.') { throw "version failed: $out" }
+          & ./scripts/powershell/guardians.ps1 verify
+          if ($LASTEXITCODE -ne 2) { throw "verify outside a project must exit 2, got $LASTEXITCODE" }
+          exit 0
+
+  spec-kit:
+    name: e2e against Spec Kit (${{ matrix.speckit }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        speckit: ["specify-cli", "specify-cli==1.0.1"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install "${{ matrix.speckit }}"
+      - run: tools/e2e-speckit.sh
+
+  action:
+    name: GitHub Action self-test (guardians verify)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install specify-cli pyyaml
+      - name: a configured lab project
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ext in scopeguard archiguard auditguard; do
+            ref_var="$(echo "$ext" | tr a-z A-Z)_REF"; ref="${!ref_var}"
+            if git ls-remote --exit-code --tags "https://github.com/rlgdev/spec-kit-$ext" "refs/tags/$ref" >/dev/null 2>&1; then
+              git -c advice.detachedHead=false clone -q --depth 1 --branch "$ref" "https://github.com/rlgdev/spec-kit-$ext" "$RUNNER_TEMP/$ext"
+            else
+              git clone -q --depth 1 "https://github.com/rlgdev/spec-kit-$ext" "$RUNNER_TEMP/$ext"
+            fi
+          done
+          specify init lab --integration claude --script sh --ignore-agent-tools --non-interactive >/dev/null
+          cd lab
+          for dir in "$RUNNER_TEMP/scopeguard" "$RUNNER_TEMP/archiguard" "$RUNNER_TEMP/auditguard" "$GITHUB_WORKSPACE"; do
+            printf 'y\ny\ny\n' | specify extension add --dev "$dir" >/dev/null
+          done
+          printf 'y\n' | specify preset add --dev "$RUNNER_TEMP/archiguard/preset" >/dev/null
+          git init -q -b main && git config user.email ci@example.com && git config user.name ci
+          bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
+      - name: verify the lab (passes)
+        uses: ./
+        with:
+          working-directory: lab
+          scopeguard: "false"
+          archiguard: "false"
+          auditguard: "false"
+      - name: make the base branches disagree
+        run: sed -i 's/^    base: main/    base: develop/' lab/.specify/extensions/auditguard/auditguard-config.yml
+      - name: verify again (must fail)
+        id: tampered
+        continue-on-error: true
+        uses: ./
+        with:
+          working-directory: lab
+          scopeguard: "false"
+          archiguard: "false"
+          auditguard: "false"
+      - run: test "${{ steps.tampered.outcome }}" = "failure"
