@@ -55,11 +55,11 @@ prints what is still missing. `specify bundle info guardians` shows the exact co
 <summary>Without the bundle (one extension at a time)</summary>
 
 ```bash
-specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.0/scopeguard.zip
-specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.0/archiguard.zip
-specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.0/archiguard-preset.zip
+specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
+specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
+specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
 specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.0/guardians.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.1/guardians.zip
 bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
 ```
 
@@ -75,12 +75,12 @@ stops before changing anything.
 ## What `configure` does
 
 ```text
-Guardians 0.1.0 | configure | /work/orders
+Guardians 0.1.1 | configure | /work/orders
 config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, archiguard, auditguard
 
   Siblings:
-  scopeGuard : scopeGuard 0.4.0 | configure
-  archiGuard : archiGuard 0.1.0 | configure
+  scopeGuard : scopeGuard 0.4.1 | configure
+  archiGuard : archiGuard 0.1.1 | configure
   auditGuard : auditGuard 0.1.0 | configure
 
   Changed:
@@ -89,15 +89,15 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
     .specify/extensions.yml: 20 hook priorities set: auditguard after_* 10 -> 90 (10), auditguard before_* 10 -> 1 (10)
 
   Tools:
-    scopeGuard : 0.4.0 | integration embedded | mode enforce | hooks 0/5
-    archiGuard : 0.1.0 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
+    scopeGuard : 0.4.1 | integration embedded | mode enforce | hooks 0/5
+    archiGuard : 0.1.1 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
     auditGuard : 0.1.0 | integration hooks | mode record | hooks 20/20
-    Guardians  : 0.1.0
+    Guardians  : 0.1.1
 
   Checks:
     [OK]   installed                   scopeguard, archiguard, auditguard, guardians
     [OK]   preset_matches_integration  archiguard-templates installed, archiGuard integration inline; scopeguard-templates absent
-    [OK]   versions_in_range           scopeGuard 0.4.0 in archiGuard's >=0.3.0,<0.5; scopeGuard 0.4.0 in auditGuard's >=0.4,<0.6; ...
+    [OK]   versions_in_range           scopeGuard 0.4.1 in archiGuard's >=0.3.0,<0.5; scopeGuard 0.4.1 in auditGuard's >=0.4,<0.6; ...
     [OK]   scopeguard_embedded         scopeGuard integration embedded (archiGuard runs the scope gate)
     [OK]   auditguard_integration      auditGuard integration hooks
     [OK]   hook_order                  no event is shared by two Guardians (gates inline / embedded); auditGuard records alone
@@ -193,7 +193,7 @@ check, each switchable:
 ```yaml
 - uses: actions/checkout@v5
   with: { fetch-depth: 0 }          # auditGuard's golden checks need the history, notes and tags
-- uses: rlgdev/spec-kit-guardians@v0.1.0
+- uses: rlgdev/spec-kit-guardians@v0.1.1
   with:
     features: all                   # or specs/001-my-feature
     auditguard-golden: "true"
@@ -201,7 +201,7 @@ check, each switchable:
 ```
 
 The verify output goes to the job summary. archiGuard's and auditGuard's actions use the engine the project installed
-(`.specify/extensions/<id>/`), falling back to their own; scopeGuard's action at the pinned `v0.4.0` runs its own engine
+(`.specify/extensions/<id>/`), falling back to their own; scopeGuard's action at the pinned `v0.4.1` runs its own engine
 (it still reads the project's `scopeguard-config.yml`). GitHub resolves every action a composite action uses
 before it runs, so this action needs the three siblings released at the bundle's pins (`rlgdev/spec-kit-<id>@v<pin>`);
 until then use the siblings' actions directly and run `guardians verify` as a plain step.

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from conftest import FakeProject, guardians_cli, make_project
+from conftest import VERSIONS, FakeProject, guardians_cli, make_project
 
 
 def run(project: FakeProject, *args: str):
@@ -45,7 +45,7 @@ def test_fresh_project_becomes_aligned(fresh: FakeProject):
     assert "scopeguard-config.yml: integration: inline -> embedded" in out
     assert "archiguard-config.yml: edit_guard.always_readonly += audit/**, .specify/extensions/auditguard/**" in out
     assert "extensions.yml: 20 hook priorities set: auditguard after_* 10 -> 90 (10), auditguard before_* 10 -> 1 (10)" in out
-    assert "scopeGuard : scopeGuard 0.4.0 | configure | integration embedded" in out
+    assert f"scopeGuard : scopeGuard {VERSIONS['scopeguard']} | configure | integration embedded" in out
     assert "[OK]   scopeguard_embedded" in out and "[OK]   edit_guard_covers_audit" in out and "[OK]   hook_order" in out
     # exit 0 even though the stub siblings do not switch their hooks off (that is their job; it is a warning here)
     assert "[WARN] hooks_match_integration" in out and "RESULT: WARN" in out

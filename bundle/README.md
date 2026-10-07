@@ -4,11 +4,11 @@ One install for the three Guardians of the Spec Kit SDLC, at versions tested tog
 
 | Component | Version | What it is |
 |-----------|---------|------------|
-| `scopeguard` extension | 0.4.0 | scope gates: no user story or requirement of `spec.md` is dropped by plan, tasks or implementation; runs **embedded** in archiGuard's pipeline |
-| `archiguard` extension | 0.1.0 | architecture gates (domain guard, plan conformance, fitness functions, handover 4→5), the edit guard, the owner of the scope gate |
+| `scopeguard` extension | 0.4.1 | scope gates: no user story or requirement of `spec.md` is dropped by plan, tasks or implementation; runs **embedded** in archiGuard's pipeline |
+| `archiguard` extension | 0.1.1 | architecture gates (domain guard, plan conformance, fitness functions, handover 4→5), the edit guard, the owner of the scope gate |
 | `auditguard` extension | 0.1.0 | the tamper-evident audit trail: every command by stage, the gate reports, waivers, human decisions, out-of-band changes |
-| `guardians` extension | 0.1.0 | this bundle's `configure` and `verify` |
-| `archiguard-templates` preset | 0.1.0 | makes archiGuard's gates steps of `/speckit.plan`, `/speckit.tasks`, `/speckit.implement` and adds its sections to the templates |
+| `guardians` extension | 0.1.1 | this bundle's `configure` and `verify` |
+| `archiguard-templates` preset | 0.1.1 | makes archiGuard's gates steps of `/speckit.plan`, `/speckit.tasks`, `/speckit.implement` and adds its sections to the templates |
 
 ## Install
 

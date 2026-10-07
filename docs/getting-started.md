@@ -51,21 +51,20 @@ specify bundle install guardians
 **Expected:** `specify extension list` shows
 `scopeguard`, `archiguard`, `auditguard` and `guardians`; `specify preset list` shows `archiguard-templates`.
 
-> **Not available yet?** The bundle resolves its components through GitHub release assets. Until **auditGuard
-> `v0.1.0`** and **Guardians `v0.1.0`** are published (scopeGuard `v0.4.0` and archiGuard `v0.1.0` are), `bundle
-> install` fails downloading them, and so do the `auditguard.zip` and `guardians.zip` lines of path B. Use path
-> B's checkout variant (`--dev`) meanwhile; the result is identical.
+> **Download fails?** The bundle resolves its components through the GitHub release assets of the pinned versions
+> (scopeGuard `v0.4.1`, archiGuard `v0.1.1`, auditGuard `v0.1.0`, Guardians `v0.1.1`). Where GitHub is not
+> reachable, use path B's checkout variant (`--dev`); the result is identical.
 
 ### Path B: one extension at a time
 
 From the release assets:
 
 ```bash
-specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.0/scopeguard.zip
-specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.0/archiguard.zip
-specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.0/archiguard-preset.zip
+specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
+specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
+specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
 specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.0/guardians.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.1/guardians.zip
 ```
 
 Spec Kit asks you to confirm each `specify extension add --from` install (`Continue with installation? [y/N]`): answer `y`.
@@ -121,7 +120,7 @@ If the result is not `OK`:
 | `[FAIL] git_base_agrees             archiguard git.base=main, auditguard golden.git.base=develop` | the two tools name different base branches; Guardians never picks a side | edit one of the two files named in the `fix:` line, run `configure` again |
 | `[FAIL] preset_matches_integration  archiGuard is configured inline but archiguard-templates is not installed (it fell back to hooks)` | the preset is missing, so the gates fell back to hooks | `specify preset add ...` (step 1), run `configure` again |
 | `[WARN] gitattributes               .gitattributes lacks 3 auditGuard line(s): ...` | auditGuard's hash chain needs its files excluded from line-ending conversion | `bash .specify/extensions/auditguard/scripts/bash/auditguard.sh configure` writes the lines |
-| `ERROR: <tool> configure failed (exit N); nothing after it ran` (Guardians exits 2) | one tool's own `configure` refused with exit N (usually a bad value in its config file, or an unknown key: archiGuard and auditGuard reject those, scopeGuard 0.4.0 does not) | the tool's own message is indented under the `<tool> : configure exited N` line just above; fix what it names, run `configure` again |
+| `ERROR: <tool> configure failed (exit N); nothing after it ran` (Guardians exits 2) | one tool's own `configure` refused with exit N (usually a bad value in its config file, or an unknown key: all three reject those) | the tool's own message is indented under the `<tool> : configure exited N` line just above; fix what it names, run `configure` again |
 
 Then commit:
 
@@ -269,7 +268,7 @@ jobs:
           fetch-depth: 0            # auditGuard's golden checks and archiGuard's traceability read the history
           submodules: true          # the standards repository at its pinned tag
       - run: git fetch -q origin "refs/notes/*:refs/notes/*" "refs/tags/*:refs/tags/*" || true
-      - uses: rlgdev/spec-kit-guardians@v0.1.0
+      - uses: rlgdev/spec-kit-guardians@v0.1.1
         with:
           features: all             # or specs/001-my-feature
 ```
@@ -279,8 +278,8 @@ auditGuard's verify (chains, seals, evidence, the golden sources) and `guardians
 to the job summary. Each part can be switched off with `scopeguard: "false"` and so on. Make the job a required
 check on the protected branch.
 
-Until Guardians `v0.1.0` is released, use the three siblings' actions directly (`rlgdev/spec-kit-scopeguard@v0.4.0`,
-`rlgdev/spec-kit-archiguard@v0.1.0`, `rlgdev/spec-kit-auditguard@v0.1.0`) and add one step:
+To compose the job yourself instead, use the three siblings' actions directly (`rlgdev/spec-kit-scopeguard@v0.4.1`,
+`rlgdev/spec-kit-archiguard@v0.1.1`, `rlgdev/spec-kit-auditguard@v0.1.0`) and add one step:
 
 ```yaml
       - run: python .specify/extensions/guardians/scripts/python/guardians.py verify
@@ -311,12 +310,9 @@ READMEs have Bitbucket Pipelines examples.
 The config files, with their full reference: [scopeGuard](https://github.com/rlgdev/spec-kit-scopeguard/blob/main/config-template.yml)
 (`scopeguard-config.yml`), [archiGuard](https://github.com/rlgdev/spec-kit-archiguard/blob/main/docs/configuration.md)
 (`archiguard-config.yml`, `scope-config.yml`), [auditGuard](https://github.com/rlgdev/spec-kit-auditguard/blob/main/docs/configuration.md)
-(`auditguard-config.yml`), [Guardians](../config-template.yml) (`guardians-config.yml`, optional). In
-`archiguard-config.yml`, `auditguard-config.yml` and `guardians-config.yml` **an unknown key is an error** (exit `2`),
-so a typo never switches a gate off silently. The pinned scopeGuard 0.4.0 validates values only (`mode`, `integration`,
-`autocorrect`, `<gate>.enabled`, `unknown_ids`, `ids`) and ignores keys it does not read, in `scopeguard-config.yml`
-and in archiGuard's `scope-config.yml` alike: after editing either, compare it against its template. scopeGuard's
-next release rejects unknown keys as well.
+(`auditguard-config.yml`), [Guardians](../config-template.yml) (`guardians-config.yml`, optional). In every one
+of these files (and in archiGuard's `scope-config.yml`, which scopeGuard reads) **an unknown key is an error** (exit `2`),
+so a typo never switches a gate off silently; scopeGuard checks its keys this way since 0.4.1.
 
 Environment variables for one run: `SCOPEGUARD_PYTHON` / `ARCHIGUARD_PYTHON` / `AUDITGUARD_PYTHON` /
 `GUARDIANS_PYTHON` (the interpreter to use), `SCOPEGUARD_MODE=report`, `ARCHIGUARD_INTEGRATION`,

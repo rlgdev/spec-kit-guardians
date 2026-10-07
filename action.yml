@@ -40,7 +40,7 @@ runs:
   steps:
     - name: scopeGuard
       if: ${{ inputs.scopeguard == 'true' }}
-      uses: rlgdev/spec-kit-scopeguard@v0.4.0
+      uses: rlgdev/spec-kit-scopeguard@v0.4.1
       with:
         command: check
         features: ${{ inputs.features }}
@@ -48,7 +48,7 @@ runs:
 
     - name: archiGuard
       if: ${{ inputs.archiguard == 'true' }}
-      uses: rlgdev/spec-kit-archiguard@v0.1.0
+      uses: rlgdev/spec-kit-archiguard@v0.1.1
       with:
         features: ${{ inputs.features }}
         working-directory: ${{ inputs.working-directory }}

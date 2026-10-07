@@ -3,7 +3,8 @@
 from pathlib import Path
 
 
-from conftest import FakeProject, all_enabled, default_priority, guardians_cli, make_project, registry_text
+from conftest import (GUARDIANS_VERSION, VERSIONS, FakeProject, all_enabled, default_priority, guardians_cli, make_project,
+                      registry_text)
 from guardians_core.config import CHECKS, load_config
 from guardians_core.siblings import Project
 from guardians_core.verify import run_verify
@@ -27,10 +28,10 @@ def test_aligned_project_passes_every_check(aligned: FakeProject):
     assert tools["scopeguard"]["integration"] == "embedded" and tools["scopeguard"]["hooks_on"] == 0
     assert tools["archiguard"]["effective_integration"] == "inline" and tools["archiguard"]["scope_in_pipeline"] is True
     assert tools["auditguard"]["hooks_on"] == 20 and tools["auditguard"]["mode"] == "record"
-    assert tools["guardians"]["version"] == "0.1.0"
+    assert tools["guardians"]["version"] == VERSIONS["guardians"]
     text = report.text()
     assert "RESULT: OK | 12 ok, 0 warnings, 0 failures" in text
-    assert "scopeGuard : 0.4.0 | integration embedded | mode enforce | hooks 0/5" in text
+    assert f"scopeGuard : {VERSIONS['scopeguard']} | integration embedded | mode enforce | hooks 0/5" in text
 
 
 def test_fresh_project_has_the_expected_failures(fresh: FakeProject):
@@ -79,7 +80,7 @@ def test_scopeguard_templates_preset_is_refused(aligned: FakeProject):
 def test_versions_in_range(aligned: FakeProject):
     aligned.replace("archiguard", 'version: ">=0.3.0,<0.5"', 'version: ">=0.5.0,<0.6"')
     check = next(c for c in verify(aligned).checks if c.id == "versions_in_range")
-    assert check.status == "fail" and "does not accept scopeGuard 0.4.0" in check.message
+    assert check.status == "fail" and f"does not accept scopeGuard {VERSIONS['scopeguard']}" in check.message
     aligned.replace("archiguard", 'version: ">=0.5.0,<0.6"', 'version: ">=0.3.0,<0.5"')
     aligned.replace("auditguard", 'version: ">=0.1,<0.3"', 'version: ">=0.2,<0.3"')
     check = next(c for c in verify(aligned).checks if c.id == "versions_in_range")
@@ -205,11 +206,11 @@ def test_two_guardians_only(tmp_path: Path):
 def test_cli_verify_text_and_json(aligned: FakeProject, chdir):
     chdir(aligned.root)
     code, out = guardians_cli("verify")
-    assert code == 0 and out.startswith("Guardians 0.1.0 | verify |") and "[OK]   installed" in out
+    assert code == 0 and out.startswith(f"Guardians {GUARDIANS_VERSION} | verify |") and "[OK]   installed" in out
     code, out = guardians_cli("verify", "--json")
     import json
     data = json.loads(out)
-    assert code == 0 and data["status"] == "ok" and len(data["checks"]) == 12 and data["tools"]["guardians"]["version"] == "0.1.0"
+    assert code == 0 and data["status"] == "ok" and len(data["checks"]) == 12 and data["tools"]["guardians"]["version"] == VERSIONS["guardians"]
 
 
 def test_cli_exit_codes(fresh: FakeProject, chdir, tmp_path: Path):
@@ -224,4 +225,4 @@ def test_cli_exit_codes(fresh: FakeProject, chdir, tmp_path: Path):
 
 def test_version_command():
     code, out = guardians_cli("version")
-    assert code == 0 and out.strip() == "Guardians 0.1.0"
+    assert code == 0 and out.strip() == f"Guardians {GUARDIANS_VERSION}"

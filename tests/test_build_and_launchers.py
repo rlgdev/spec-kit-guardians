@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import REPO, requires_bash
+from conftest import GUARDIANS_VERSION, REPO, requires_bash
 
 BUILD = REPO / "tools" / "build.py"
 
@@ -25,7 +25,7 @@ def test_check_passes():
 
 
 def test_check_tag():
-    assert run(str(BUILD), "--check", "--check-tag", "v0.1.0").returncode == 0
+    assert run(str(BUILD), "--check", "--check-tag", f"v{GUARDIANS_VERSION}").returncode == 0
     proc = run(str(BUILD), "--check", "--check-tag", "v9.9.9")
     assert proc.returncode == 1 and "does not match" in proc.stderr
 
@@ -54,12 +54,12 @@ def test_catalog_download_urls_are_release_assets():
     for ext_id, entry in extensions.items():
         assert entry["download_url"] == f"https://github.com/rlgdev/spec-kit-{ext_id}/releases/download/v{entry['version']}/{ext_id}.zip"
     bundles = json.loads((REPO / "catalog" / "bundles.json").read_text(encoding="utf-8"))["bundles"]
-    assert bundles["guardians"]["download_url"].endswith("/v0.1.0/guardians-bundle.zip")
+    assert bundles["guardians"]["download_url"].endswith(f"/v{GUARDIANS_VERSION}/guardians-bundle.zip")
 
 
 def test_python_launcher(tmp_path: Path):
     proc = run(str(REPO / "scripts" / "python" / "guardians.py"), "version", cwd=tmp_path)
-    assert proc.returncode == 0 and proc.stdout.strip() == "Guardians 0.1.0"
+    assert proc.returncode == 0 and proc.stdout.strip() == f"Guardians {GUARDIANS_VERSION}"
     proc = run(str(REPO / "scripts" / "python" / "guardians.py"), "verify", cwd=tmp_path)
     assert proc.returncode == 2 and "no Spec Kit project found" in proc.stderr
 
@@ -69,7 +69,7 @@ def test_bash_launcher(tmp_path: Path):
     env = dict(os.environ, GUARDIANS_PYTHON=sys.executable)
     proc = subprocess.run(["bash", str(REPO / "scripts" / "bash" / "guardians.sh"), "version"], cwd=str(tmp_path),
                           capture_output=True, text=True, env=env)
-    assert proc.returncode == 0 and proc.stdout.strip() == "Guardians 0.1.0"
+    assert proc.returncode == 0 and proc.stdout.strip() == f"Guardians {GUARDIANS_VERSION}"
     env["GUARDIANS_PYTHON"] = "/no/such/python"
     proc = subprocess.run(["bash", str(REPO / "scripts" / "bash" / "guardians.sh"), "version"], cwd=str(tmp_path),
                           capture_output=True, text=True, env=env)

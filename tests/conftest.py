@@ -5,6 +5,7 @@ registry in Spec Kit's own dump style, and Guardians itself."""
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import textwrap
@@ -19,7 +20,16 @@ SRC = REPO / "scripts" / "python"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-VERSIONS = {"scopeguard": "0.4.0", "archiguard": "0.1.0", "auditguard": "0.1.0", "guardians": "0.1.0"}
+import guardians_core  # noqa: E402
+
+GUARDIANS_VERSION = guardians_core.__version__
+
+# The stub siblings are installed at the bundle's pins (the fixtures are their config templates at those tags).
+VERSIONS = dict(re.findall(r'\{ id: "(scopeguard|archiguard|auditguard|guardians)",\s+version: "([^"]+)" \}',
+                           (REPO / "bundle" / "bundle.yml").read_text(encoding="utf-8")))
+assert sorted(VERSIONS) == ["archiguard", "auditguard", "guardians", "scopeguard"], VERSIONS
+PRESET_VERSION = re.search(r'\{ id: "archiguard-templates", version: "([^"]+)"',
+                           (REPO / "bundle" / "bundle.yml").read_text(encoding="utf-8")).group(1)
 NAMES = {"scopeguard": "scopeGuard", "archiguard": "archiGuard", "auditguard": "auditGuard", "guardians": "Guardians"}
 DEFAULT_INTEGRATION = {"scopeguard": "inline", "archiguard": "inline", "auditguard": "hooks"}
 DEFAULT_MODE = {"scopeguard": "enforce", "archiguard": "enforce", "auditguard": "record"}
@@ -190,7 +200,7 @@ def make_project(root: Path, aligned: bool, siblings: Iterable[str] = ("scopegua
     if preset:
         p_dir = root / ".specify" / "presets" / "archiguard-templates"
         p_dir.mkdir(parents=True, exist_ok=True)
-        (p_dir / "preset.yml").write_text('schema_version: "1.0"\npreset:\n  id: archiguard-templates\n  version: "0.1.0"\n', encoding="utf-8")
+        (p_dir / "preset.yml").write_text('schema_version: "1.0"\npreset:\n  id: archiguard-templates\n  version: "' + PRESET_VERSION + '"\n', encoding="utf-8")
     project = FakeProject(root)
     if aligned:
         project.write(".specify/extensions.yml", registry_text(aligned_enabled, aligned_priority, siblings))

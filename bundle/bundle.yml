@@ -11,7 +11,7 @@ schema_version: "1.0"
 bundle:
   id: "guardians"
   name: "Guardians"
-  version: "0.1.0"
+  version: "0.1.1"
   role: "architect"
   description: "scopeGuard, archiGuard and auditGuard at tested versions, with one configure and one alignment check: scope, architecture and audit-trail governance for the Spec Kit SDLC"
   author: "rlgdev"
@@ -26,15 +26,15 @@ requires:
 
 provides:
   extensions:
-    - { id: "scopeguard", version: "0.4.0" }   # scope gates; runs embedded in archiGuard's pipeline
-    - { id: "archiguard", version: "0.1.0" }   # architecture gates, edit guard, the scope gate's owner
+    - { id: "scopeguard", version: "0.4.1" }   # scope gates; runs embedded in archiGuard's pipeline
+    - { id: "archiguard", version: "0.1.1" }   # architecture gates, edit guard, the scope gate's owner
     - { id: "auditguard", version: "0.1.0" }   # the audit trail of every command, gate report and decision
-    - { id: "guardians",  version: "0.1.0" }   # this bundle's configure and verify
+    - { id: "guardians",  version: "0.1.1" }   # this bundle's configure and verify
   presets:
     # archiGuard's default integration is inline: the preset makes the gates steps of /speckit.plan, /speckit.tasks
     # and /speckit.implement and adds the Architecture Conformance / Scope Coverage / Fitness sections to the templates.
     # `strategy` is required by the bundle schema; the preset's own per-entry strategies apply at install.
-    - { id: "archiguard-templates", version: "0.1.0", priority: 10, strategy: "wrap" }
+    - { id: "archiguard-templates", version: "0.1.1", priority: 10, strategy: "wrap" }
   # No scopeguard-templates (archiGuard wraps the commands and runs the scope gate itself) and no workflows
   # (scopeguard-sdd / archiguard-sdd are for integration: workflow; add them by hand when you use it).
 

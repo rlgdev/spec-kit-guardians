@@ -63,5 +63,6 @@ at release assets by tag:
    From that moment the three catalog URLs on `main` resolve, `specify bundle install guardians` works, and
    `uses: rlgdev/spec-kit-guardians@vX.Y.Z` resolves the three sibling actions it is composed of.
 
-The first release of the family follows the same order: auditGuard `v0.1.0` (not yet tagged at the time of
-writing), then Guardians `v0.1.0`. scopeGuard `v0.4.0` and archiGuard `v0.1.0` are published.
+The first release of the family followed the same order: auditGuard `v0.1.0`, then Guardians `v0.1.0` (scopeGuard
+`v0.4.0` and archiGuard `v0.1.0` were already published). Guardians `v0.1.1` followed scopeGuard `v0.4.1` and
+archiGuard `v0.1.1`.

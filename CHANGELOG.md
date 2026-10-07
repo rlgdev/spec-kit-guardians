@@ -5,6 +5,22 @@ All notable changes to Guardians are documented here. The format follows
 [Semantic Versioning](https://semver.org/). A bundle version is a tested combination of the siblings'
 versions; the pins are listed with every release.
 
+## [0.1.1] - 2026-10-07
+
+A bundle for the siblings' patch releases.
+
+Pins: scopeGuard 0.4.1 · archiGuard 0.1.1 · auditGuard 0.1.0 · archiguard-templates 0.1.1.
+
+### Changed
+
+- The bundle, the three catalogs, the composite action and the CI refs pin scopeGuard 0.4.1 and archiGuard 0.1.1
+  (the family-consistency, audit and review fixes released as patches); the scopeGuard config fixture is its template
+  at `v0.4.1`.
+- The getting-started guide: scopeGuard rejects unknown config keys since 0.4.1, so all three tools do; the notes about
+  auditGuard and Guardians not being released yet are gone.
+- The tests read the Guardians version and the stub siblings' versions from the package and `bundle/bundle.yml`, so a
+  pin bump touches only the files `CONTRIBUTING.md` lists.
+
 ## [0.1.0] - 2026-10-06
 
 First release: the specification "Guardians bundle for Spec Kit - Specification v1.0"
