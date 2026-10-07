@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: guardians
   name: "Guardians"
-  version: "0.1.1"
+  version: "0.1.2"
   description: "One cover for scopeGuard, archiGuard and auditGuard: configures the three in order, cross-wires what each needs from the others, orders their hooks and verifies that their configurations agree"
   author: "rlgdev"
   repository: https://github.com/rlgdev/spec-kit-guardians
@@ -13,8 +13,9 @@ extension:
   effect: read-write          # writes only: hook priorities in .specify/extensions.yml, scopeGuard's `integration`, archiGuard's `edit_guard.always_readonly`
 
 requires:
-  # 1.0.1: what archiGuard and auditGuard need (agent-native runtime events, hooks on all commands); bundles exist since 0.11.4
-  speckit_version: ">=1.0.1"
+  # 1.0.3: the bundle's floor - the first Spec Kit whose `bundle install` creates the siblings' config files from their
+  # templates (archiGuard and auditGuard themselves need 1.0.1: agent-native runtime events, hooks on all commands)
+  speckit_version: ">=1.0.3"
   # informational: as of Spec Kit 1.1.1 the CLI reads only requires.speckit_version from this manifest (extension add,
   # compatibility and `extension info` of a local install ignore `tools`; info lists tools only from a catalog entry).
   # The launchers find python themselves.

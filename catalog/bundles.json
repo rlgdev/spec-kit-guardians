@@ -1,23 +1,23 @@
 {
   "schema_version": "1.0",
-  "updated_at": "2026-10-07T08:00:00Z",
+  "updated_at": "2026-10-07T12:00:00Z",
   "catalog_url": "https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/bundles.json",
   "bundles": {
     "guardians": {
       "id": "guardians",
       "name": "Guardians",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "role": "architect",
       "description": "scopeGuard, archiGuard and auditGuard at tested versions, with one configure and one alignment check: scope, architecture and audit-trail governance for the Spec Kit SDLC.",
       "author": "rlgdev",
       "license": "MIT",
-      "download_url": "https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.1/guardians-bundle.zip",
+      "download_url": "https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.2/guardians-bundle.zip",
       "repository": "https://github.com/rlgdev/spec-kit-guardians",
       "homepage": "https://github.com/rlgdev/spec-kit-guardians",
       "documentation": "https://github.com/rlgdev/spec-kit-guardians/blob/main/README.md",
       "changelog": "https://github.com/rlgdev/spec-kit-guardians/blob/main/CHANGELOG.md",
       "requires": {
-        "speckit_version": ">=1.0.1"
+        "speckit_version": ">=1.0.3"
       },
       "provides": {
         "extensions": 4,

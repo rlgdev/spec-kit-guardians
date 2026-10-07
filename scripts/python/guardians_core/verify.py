@@ -119,6 +119,12 @@ def _cfg_path(sib: Sibling) -> str:
     return rel(sib.config_path, sib.root)
 
 
+def _configure_fix(sib: Sibling, what: str) -> str:
+    """The fix for a cross-wiring check: guardians configure, once the sibling's config file exists."""
+    first = "" if sib.config_path.is_file() else f"{sib.config_hint()}, then "
+    return f"{first}guardians configure ({what})"
+
+
 def check_installed(project: Project, c: Check) -> Check:
     missing = [ext for ext in GUARDIANS if not project.sibling(ext).installed]
     if missing:
@@ -194,7 +200,7 @@ def check_scopeguard_embedded(project: Project, c: Check) -> Check:
     integration = sg.integration()
     if integration != "embedded":
         return c.problem(f"scopeGuard integration is {integration} while archiGuard runs the scope gate",
-                         f"guardians configure (sets integration: embedded in {_cfg_path(sg)})")
+                         _configure_fix(sg, f"sets integration: embedded in {_cfg_path(sg)}"))
     return c.ok("scopeGuard integration embedded (archiGuard runs the scope gate)")
 
 
@@ -292,7 +298,7 @@ def check_edit_guard_covers_audit(project: Project, c: Check) -> Check:
                          f"{_cfg_path(ag)} edit_guard.enabled: true")
     if missing:
         return c.problem(f"archiGuard edit_guard.always_readonly lacks {', '.join(missing)}",
-                         f"guardians configure (appends them in {_cfg_path(ag)})")
+                         _configure_fix(ag, f"appends them in {_cfg_path(ag)}"))
     return c.ok(f"archiGuard's edit guard covers {', '.join(au.audit_readonly())}")
 
 

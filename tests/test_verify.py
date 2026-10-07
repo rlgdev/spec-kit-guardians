@@ -226,3 +226,22 @@ def test_cli_exit_codes(fresh: FakeProject, chdir, tmp_path: Path):
 def test_version_command():
     code, out = guardians_cli("version")
     assert code == 0 and out.strip() == f"Guardians {GUARDIANS_VERSION}"
+
+
+def test_cross_wiring_fix_names_the_template_when_a_config_is_missing(fresh: FakeProject):
+    fresh.config_path("scopeguard").unlink()
+    fresh.config_path("archiguard").unlink()
+    checks = {c.id: c for c in verify(fresh).checks}
+    for check_id, ext in (("scopeguard_embedded", "scopeguard"), ("edit_guard_covers_audit", "archiguard")):
+        d = f".specify/extensions/{ext}"
+        assert checks[check_id].status == "fail"
+        assert checks[check_id].fix.startswith(f"copy {d}/config-template.yml to {d}/{ext}-config.yml, then guardians configure (")
+
+
+def test_config_hint_follows_the_declared_template(fresh: FakeProject):
+    manifest = fresh.path(".specify/extensions/scopeguard/extension.yml")
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace(
+        "provides:\n  commands: []\n",
+        'provides:\n  commands: []\n  config:\n    - { name: "scopeguard-config.yml", template: "templates/sg.yml" }\n'), encoding="utf-8")
+    hint = Project(fresh.root).sibling("scopeguard").config_hint()
+    assert hint == "copy .specify/extensions/scopeguard/templates/sg.yml to .specify/extensions/scopeguard/scopeguard-config.yml"

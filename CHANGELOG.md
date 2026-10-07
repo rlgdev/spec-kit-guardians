@@ -5,6 +5,26 @@ All notable changes to Guardians are documented here. The format follows
 [Semantic Versioning](https://semver.org/). A bundle version is a tested combination of the siblings'
 versions; the pins are listed with every release.
 
+## [0.1.2] - 2026-10-07
+
+Pins unchanged: scopeGuard 0.4.1 · archiGuard 0.1.1 · auditGuard 0.1.0 · archiguard-templates 0.1.1.
+
+### Changed
+
+- The bundle and the `guardians` extension require Spec Kit 1.0.3 or newer (was 1.0.1). Spec Kit 1.0.1 and 1.0.2 do not
+  create the extensions' config files from their templates on `specify bundle install`, so `guardians configure` had
+  nothing to cross-wire and `verify` failed; those versions now refuse the bundle before installing anything, with
+  "requires Spec Kit >=1.0.3". The siblings' own floors stay at 1.0.1.
+- CI: the end-to-end run uses Spec Kit 1.0.3 instead of 1.0.1 next to the latest release, and a `floor` job checks that
+  Spec Kit 1.0.2 refuses the bundle.
+
+### Fixed
+
+- `configure` said a missing sibling config file would be created by the sibling's own `configure`; none of the three
+  does. The note now names the copy to make (`copy <template> to <config>, then run guardians configure again`, the
+  template the sibling's manifest declares), and the `fix:` lines of `scopeguard_embedded` and `edit_guard_covers_audit`
+  start with the same copy when the file is missing. Guardians still writes nothing in its place.
+
 ## [0.1.1] - 2026-10-07
 
 A bundle for the siblings' patch releases.

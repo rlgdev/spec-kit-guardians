@@ -31,7 +31,7 @@ mode, budgets) are compared, never written.
 
 ## Install
 
-Requires Spec Kit (`specify-cli`) 1.0.1 or newer and Python 3.9+. From your Spec Kit project root:
+Requires Spec Kit (`specify-cli`) 1.0.3 or newer and Python 3.9+. From your Spec Kit project root:
 
 ```bash
 # 1. the family's catalogs (extensions, the preset, the bundle)
@@ -59,7 +59,7 @@ specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scope
 specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
 specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
 specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.1/guardians.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.2/guardians.zip
 bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
 ```
 
@@ -75,7 +75,7 @@ stops before changing anything.
 ## What `configure` does
 
 ```text
-Guardians 0.1.1 | configure | /work/orders
+Guardians 0.1.2 | configure | /work/orders
 config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, archiguard, auditguard
 
   Siblings:
@@ -92,7 +92,7 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
     scopeGuard : 0.4.1 | integration embedded | mode enforce | hooks 0/5
     archiGuard : 0.1.1 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
     auditGuard : 0.1.0 | integration hooks | mode record | hooks 20/20
-    Guardians  : 0.1.1
+    Guardians  : 0.1.2
 
   Checks:
     [OK]   installed                   scopeguard, archiguard, auditguard, guardians
@@ -193,7 +193,7 @@ check, each switchable:
 ```yaml
 - uses: actions/checkout@v5
   with: { fetch-depth: 0 }          # auditGuard's golden checks need the history, notes and tags
-- uses: rlgdev/spec-kit-guardians@v0.1.1
+- uses: rlgdev/spec-kit-guardians@v0.1.2
   with:
     features: all                   # or specs/001-my-feature
     auditguard-golden: "true"

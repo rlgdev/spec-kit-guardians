@@ -26,7 +26,7 @@ Run each line. If one fails, fix it before going on; nothing below works without
 |------|-------|-------------|
 | Python 3.9 or newer | `python3 --version` (Windows: `python --version`) | install Python from python.org or your package manager. On Windows, do **not** rely on the Microsoft Store `python3` alias: the launchers skip it |
 | git 2.20 or newer | `git --version` | install git |
-| Spec Kit 1.0.1 or newer | `specify version` | `uv tool install specify-cli` (or `pip install specify-cli`); upgrade with `uv tool upgrade specify-cli` |
+| Spec Kit 1.0.3 or newer | `specify version` | `uv tool install specify-cli` (or `pip install specify-cli`); upgrade with `uv tool upgrade specify-cli` |
 | a Spec Kit project | `ls .specify/` prints `memory`, `scripts` and `templates` (`extensions/` only appears after the first install in step 1) | `specify init <name> --integration claude` (or your agent), then `cd` into it |
 | the project is a git repository, at its root | `git rev-parse --show-toplevel` prints the project directory | `git init -b main`; auditGuard's git checks need the project root to be the repository root |
 | an agent integration | `.claude/` (Claude Code), `.github/` (Copilot), ... exists in the project | pick one at `specify init`; the gates themselves run without an agent, from the shell |
@@ -52,7 +52,7 @@ specify bundle install guardians
 `scopeguard`, `archiguard`, `auditguard` and `guardians`; `specify preset list` shows `archiguard-templates`.
 
 > **Download fails?** The bundle resolves its components through the GitHub release assets of the pinned versions
-> (scopeGuard `v0.4.1`, archiGuard `v0.1.1`, auditGuard `v0.1.0`, Guardians `v0.1.1`). Where GitHub is not
+> (scopeGuard `v0.4.1`, archiGuard `v0.1.1`, auditGuard `v0.1.0`, Guardians `v0.1.2`). Where GitHub is not
 > reachable, use path B's checkout variant (`--dev`); the result is identical.
 
 ### Path B: one extension at a time
@@ -64,7 +64,7 @@ specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scope
 specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
 specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
 specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.1/guardians.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.2/guardians.zip
 ```
 
 Spec Kit asks you to confirm each `specify extension add --from` install (`Continue with installation? [y/N]`): answer `y`.
@@ -120,6 +120,7 @@ If the result is not `OK`:
 | `[FAIL] git_base_agrees             archiguard git.base=main, auditguard golden.git.base=develop` | the two tools name different base branches; Guardians never picks a side | edit one of the two files named in the `fix:` line, run `configure` again |
 | `[FAIL] preset_matches_integration  archiGuard is configured inline but archiguard-templates is not installed (it fell back to hooks)` | the preset is missing, so the gates fell back to hooks | `specify preset add ...` (step 1), run `configure` again |
 | `[WARN] gitattributes               .gitattributes lacks 3 auditGuard line(s): ...` | auditGuard's hash chain needs its files excluded from line-ending conversion | `bash .specify/extensions/auditguard/scripts/bash/auditguard.sh configure` writes the lines |
+| `NOTE: .specify/extensions/<tool>/<tool>-config.yml not found: copy ... to ..., then run guardians configure again` | the tool's config file is missing: deleted, or installed by a `bundle install` on Spec Kit 1.0.1 / 1.0.2, which do not create it (Guardians needs 1.0.3 for that reason) | make the copy the note names (the template is the tool's own default config), run `configure` again |
 | `ERROR: <tool> configure failed (exit N); nothing after it ran` (Guardians exits 2) | one tool's own `configure` refused with exit N (usually a bad value in its config file, or an unknown key: all three reject those) | the tool's own message is indented under the `<tool> : configure exited N` line just above; fix what it names, run `configure` again |
 
 Then commit:
@@ -268,7 +269,7 @@ jobs:
           fetch-depth: 0            # auditGuard's golden checks and archiGuard's traceability read the history
           submodules: true          # the standards repository at its pinned tag
       - run: git fetch -q origin "refs/notes/*:refs/notes/*" "refs/tags/*:refs/tags/*" || true
-      - uses: rlgdev/spec-kit-guardians@v0.1.1
+      - uses: rlgdev/spec-kit-guardians@v0.1.2
         with:
           features: all             # or specs/001-my-feature
 ```

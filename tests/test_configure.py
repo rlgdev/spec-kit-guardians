@@ -138,3 +138,17 @@ def test_without_archiguard_scopeguard_keeps_its_integration(tmp_path: Path):
     assert yaml.safe_load(project.config("scopeguard"))["integration"] == "inline"
     assert "archiGuard : not installed - skipped" in out
     assert "[FAIL] installed" in out
+
+
+def test_missing_sibling_configs_say_how_to_create_them(fresh: FakeProject):
+    # a bundle install on Spec Kit 1.0.1 / 1.0.2 does not copy the config templates: configure names the copy to make
+    # and writes nothing in their place (creating a sibling's config is not one of the three things Guardians writes)
+    for ext in ("scopeguard", "archiguard"):
+        fresh.config_path(ext).unlink()
+    code, out = run(fresh)
+    assert code == 1, out
+    for ext in ("scopeguard", "archiguard"):
+        d = f".specify/extensions/{ext}"
+        assert f"NOTE: {d}/{ext}-config.yml not found: copy {d}/config-template.yml to {d}/{ext}-config.yml, then run guardians configure again" in out
+        assert not fresh.config_path(ext).exists()
+    assert "creates it" not in out

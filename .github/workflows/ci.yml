@@ -132,7 +132,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        speckit: ["specify-cli", "specify-cli==1.0.1"]
+        speckit: ["specify-cli", "specify-cli==1.0.3"]   # 1.0.3: the bundle's floor
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -140,6 +140,27 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install "${{ matrix.speckit }}"
       - run: bash tools/e2e-speckit.sh
+
+  floor:
+    name: Spec Kit 1.0.2 refuses the bundle (floor 1.0.3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install "specify-cli==1.0.2"
+      - name: bundle install must stop before installing anything
+        run: |
+          # 1.0.1 and 1.0.2 do not create the extensions' config files on `bundle install`; the floor keeps them out
+          cd "$RUNNER_TEMP" && specify init lab --integration claude --script sh --ignore-agent-tools --non-interactive >/dev/null
+          cd lab
+          if out=$(specify bundle install "$GITHUB_WORKSPACE/bundle/bundle.yml" --offline 2>&1); then
+            echo "$out"; echo "::error::Spec Kit 1.0.2 installed the bundle"; exit 1
+          fi
+          echo "$out"
+          echo "$out" | tr -s ' \n' ' ' | grep -q "requires Spec Kit >=1.0.3"
+          test ! -d .specify/extensions/guardians
 
   action:
     name: GitHub Action self-test (guardians verify)

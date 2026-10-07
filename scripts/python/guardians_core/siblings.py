@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from . import yamlio
-from .common import EXTENSIONS_YML, GUARDIANS, PRESETS, SIBLINGS, GuardiansError, read_text, run
+from .common import EXTENSIONS_YML, GUARDIANS, PRESETS, SIBLINGS, GuardiansError, read_text, rel, run
 
 # What the siblings assume when a key is missing from their config (their config templates, at the pins).
 ARCHIGUARD_READONLY = [".specify/standards/**", ".specify/archiguard/**", ".specify/extensions/archiguard/**",
@@ -58,6 +58,18 @@ class Sibling:
 
     def get(self, *keys: str, default: Any = None) -> Any:
         return yamlio.get(self.config(), *keys, default=default)
+
+    def config_hint(self) -> str:
+        """How to create a missing config file: copy the template the manifest declares for it, as Spec Kit does when
+        it installs the extension (a bundle install before Spec Kit 1.0.3 skipped that step)."""
+        template = "config-template.yml"
+        try:
+            for entry in yamlio.get(yamlio.load_file(self.manifest), "provides", "config", default=[]) or []:
+                if isinstance(entry, dict) and entry.get("name") == self.config_path.name and entry.get("template"):
+                    template = str(entry["template"])
+        except GuardiansError:
+            pass
+        return f"copy {rel(self.dir / template, self.root)} to {rel(self.config_path, self.root)}"
 
     def status(self) -> Optional[Dict[str, Any]]:
         """The sibling's own `configure --dry-run --json`: integration after its overrides and fallbacks, hooks, ..."""

@@ -11,14 +11,16 @@ schema_version: "1.0"
 bundle:
   id: "guardians"
   name: "Guardians"
-  version: "0.1.1"
+  version: "0.1.2"
   role: "architect"
   description: "scopeGuard, archiGuard and auditGuard at tested versions, with one configure and one alignment check: scope, architecture and audit-trail governance for the Spec Kit SDLC"
   author: "rlgdev"
   license: "MIT"
 
 requires:
-  speckit_version: ">=1.0.1"
+  # 1.0.3: the first Spec Kit whose `bundle install` creates each extension's config from its template; 1.0.1 and 1.0.2
+  # leave the configs out, so `guardians configure` has nothing to cross-wire. Their resolver refuses this bundle up front.
+  speckit_version: ">=1.0.3"
   tools: ["python>=3.9", "git>=2.20"]
   mcp: []
 
@@ -29,7 +31,7 @@ provides:
     - { id: "scopeguard", version: "0.4.1" }   # scope gates; runs embedded in archiGuard's pipeline
     - { id: "archiguard", version: "0.1.1" }   # architecture gates, edit guard, the scope gate's owner
     - { id: "auditguard", version: "0.1.0" }   # the audit trail of every command, gate report and decision
-    - { id: "guardians",  version: "0.1.1" }   # this bundle's configure and verify
+    - { id: "guardians",  version: "0.1.2" }   # this bundle's configure and verify
   presets:
     # archiGuard's default integration is inline: the preset makes the gates steps of /speckit.plan, /speckit.tasks
     # and /speckit.implement and adds the Architecture Conformance / Scope Coverage / Fitness sections to the templates.

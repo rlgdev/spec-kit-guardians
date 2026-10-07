@@ -54,7 +54,7 @@ def wire_scopeguard_embedded(project: Project, outcome: Outcome, dry_run: bool) 
         outcome.lines.append(f"  NOTE: scopeGuard {sg.version} has no embedded integration (needs 0.4.0); left as it is")
         return
     if not sg.config_path.is_file():
-        outcome.lines.append(f"  NOTE: {rel(sg.config_path, project.root)} not found; scopeGuard's configure creates it - run guardians configure again")
+        outcome.lines.append(f"  NOTE: {rel(sg.config_path, project.root)} not found: {sg.config_hint()}, then run guardians configure again")
         return
     if sg.get("integration") == "embedded":
         return
@@ -70,7 +70,7 @@ def wire_edit_guard(project: Project, outcome: Outcome, dry_run: bool) -> None:
     if not (ag.installed and au.installed):
         return
     if not ag.config_path.is_file():
-        outcome.lines.append(f"  NOTE: {rel(ag.config_path, project.root)} not found; archiGuard's configure creates it - run guardians configure again")
+        outcome.lines.append(f"  NOTE: {rel(ag.config_path, project.root)} not found: {ag.config_hint()}, then run guardians configure again")
         return
     current = ag.get("edit_guard", "always_readonly", default=ARCHIGUARD_READONLY)
     current = [str(p) for p in current] if isinstance(current, list) else []
