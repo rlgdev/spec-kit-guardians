@@ -15,7 +15,9 @@ $ARGUMENTS
 ## Goal
 
 One configure for the family: set scopeGuard to `integration: embedded` (archiGuard runs the scope gate), add
-the audit trail to archiGuard's edit guard, run the three tools' own `configure` commands in order, give
+the audit trail to archiGuard's edit guard, add Spec Kit's catalogs back to a catalog file that lists only the
+Guardians', run the three tools' own `configure` commands in order, have Spec Kit wire the agent events a bundle
+install leaves out (`specify extension disable guardians, then specify extension enable guardians`), give
 auditGuard's hooks the first and last place on the events it shares with a gate, and print one table of what is
 in force with the alignment checks.
 
@@ -23,7 +25,8 @@ in force with the alignment checks.
 
 1. Run `{SCRIPT}` from the repository root. Append `--dry-run` if the user only wants to see what would change.
 2. Show the output as is. Exit code `0` = configured and aligned; `1` = a `[FAIL]` remains; `2` = a sibling's
-   configure failed or a file could not be read (its output is shown - stop there).
+   configure or `specify extension enable guardians` failed, or a file could not be read (its output is shown -
+   stop there).
 3. A remaining `[FAIL]` names a decision for a person (for example `git_base_agrees`: two files name different
    base branches). Tell the user which files disagree and what each says. Do not pick a side and do not edit the
    three tools' config files or `.specify/extensions.yml` yourself: Guardians made every change that is safe to

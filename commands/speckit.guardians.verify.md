@@ -16,8 +16,8 @@ $ARGUMENTS
 
 Report, without changing anything, whether the three Guardians agree: all installed at versions they accept from
 each other, the preset matching archiGuard's integration, scopeGuard embedded under archiGuard, auditGuard's
-hooks first and last on shared events, one base branch, the edit guard covering the audit trail, modes,
-`.gitattributes` and CODEOWNERS.
+hooks first and last on shared events, one base branch, the edit guard covering the audit trail, the agent
+events wired, modes, `.gitattributes` and CODEOWNERS, and Spec Kit's catalogs still in the project's catalog files.
 
 ## Steps
 

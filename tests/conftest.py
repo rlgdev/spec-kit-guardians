@@ -1,9 +1,11 @@
 """Test fixtures: a fake Spec Kit project with the three siblings (their real config templates at the pinned
 versions, stub launchers that answer `configure --dry-run --json` the way the real ones do), the preset, a hook
-registry in Spec Kit's own dump style, and Guardians itself."""
+registry in Spec Kit's own dump style, the agent integration and the catalog files, and Guardians itself. A stub
+`specify` (extension disable / enable) stands in for the Spec Kit CLI; the real one is never called."""
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -47,6 +49,35 @@ HOOKS: Dict[str, List[Tuple[str, str, bool]]] = {
                    for cmd in AUDIT_COMMANDS for when in ("before", "after")],
 }
 EVENT_ORDER = [f"{when}_{cmd}" for cmd in AUDIT_COMMANDS for when in ("before", "after")]
+# the agent events the real manifests declare (Spec Kit wires them into the agent's settings)
+EVENTS = {
+    "archiguard": [("pre_tool_use", "speckit.archiguard.editguard"), ("post_tool_use", "speckit.archiguard.editguard")],
+    "auditguard": [("session_start", "speckit.auditguard.sessionstart"), ("stop", "speckit.auditguard.stop"),
+                   ("session_end", "speckit.auditguard.sessionend"), ("pre_tool_use", "speckit.auditguard.guard")],
+}
+SPECKIT_RAW = "https://raw.githubusercontent.com/github/spec-kit/main"
+FAMILY_RAW = "https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog"
+
+
+def catalog_file(kind: str, seeded: bool) -> str:
+    """A catalog stack file the way `specify <kind> catalog add` writes it: the Guardians catalog alone (the old
+    install docs), or after Spec Kit's default and community catalogs (the current install docs)."""
+    entry = "- name: {name}\n  url: {url}\n  priority: {priority}\n  install_allowed: {allowed}\n  description: ''\n"
+    folder = "extensions" if kind == "extension" else "presets"
+    text = "catalogs:\n"
+    if seeded:
+        text += entry.format(name="default", url=f"{SPECKIT_RAW}/{folder}/catalog.json", priority=1, allowed="true")
+        text += entry.format(name="community", url=f"{SPECKIT_RAW}/{folder}/catalog.community.json", priority=20, allowed="false")
+    return text + entry.format(name="guardians", url=f"{FAMILY_RAW}/{folder}.json", priority=10, allowed="true")
+
+
+def claude_settings(commands: Iterable[str]) -> str:
+    """.claude/settings.json with Spec Kit's event entries for these commands (none: a bundle install's state)."""
+    hooks = [{"type": "command", "command": f'python3 "${{CLAUDE_PROJECT_DIR}}/.specify/events.py" {c} pre_tool_use 10',
+              "__speckit_event__": True} for c in commands]
+    return json.dumps({"hooks": {"PreToolUse": [{"matcher": "*", "hooks": hooks}]}} if hooks else {}, indent=2) + "\n"
+
+
 GITATTRIBUTES = "* text=auto eol=lf\naudit/**/*.jsonl -text\naudit/**/evidence/** -text\naudit/**/seal.json -text\n"
 CODEOWNERS = "* @team\naudit/ @lead-architect\n.specify/standards/ @lead-architect\n.specify/archiguard/ @lead-architect\n.specify/extensions/ @lead-architect\n"
 
@@ -90,6 +121,70 @@ else:
     print(NAME + " " + VERSION + " | configure" + (" (dry run)" if data["dry_run"] else "") + " | integration " + effective)
     print("  hooks: none changed (stub)")
 '''
+
+STUB_SPECIFY = '''#!/usr/bin/env python3
+"""Stub of the Spec Kit CLI for `extension disable|enable <id>`, as Spec Kit 1.1.1 does it: the registry flag, the
+hook registry rewritten with the platform's line ending, a missing config scaffolded on enable, then the agent events
+of every enabled extension into .claude/settings.json. Records each call. .specify/SPECIFY_FAIL names the actions that
+fail before anything changes; .specify/SPECIFY_FAIL_LATE the ones that fail after the registry flag changed (as an
+event-refresh error does); .specify/SPECIFY_NOWIRE makes the event refresh write nothing."""
+import json, re, shutil, sys
+from pathlib import Path
+ROOT = Path.cwd()
+args = sys.argv[1:]
+with open(ROOT / ".specify" / "stub-specify.log", "a", encoding="utf-8") as log:
+    log.write(" ".join(args) + "\\n")
+if len(args) != 3 or args[0] != "extension" or args[1] not in ("disable", "enable"):
+    print("stub: only extension disable|enable <id>", file=sys.stderr); sys.exit(2)
+def listed(name):
+    path = ROOT / ".specify" / name
+    return path.is_file() and args[1] in path.read_text().split()
+if listed("SPECIFY_FAIL"):
+    print("Error: " + args[1] + " failed on purpose"); sys.exit(1)
+reg_path = ROOT / ".specify" / "extensions" / ".registry"
+reg = json.loads(reg_path.read_text(encoding="utf-8")) if reg_path.is_file() else {"schema_version": "1.0", "extensions": {}}
+reg["extensions"].setdefault(args[2], {})["enabled"] = args[1] == "enable"
+reg_path.write_text(json.dumps(reg, indent=2), encoding="utf-8")
+if listed("SPECIFY_FAIL_LATE"):
+    print("Error: " + args[1] + " failed late on purpose"); sys.exit(1)
+ext_yml = ROOT / ".specify" / "extensions.yml"
+if ext_yml.is_file():
+    dumped = "".join(l for l in ext_yml.read_text(encoding="utf-8").splitlines(True) if not l.lstrip().startswith("#"))
+    ext_yml.write_text(dumped, encoding="utf-8")   # yaml.dump + write_text: no comments, the platform line ending
+ext_dir = ROOT / ".specify" / "extensions" / args[2]
+if args[1] == "enable" and (ext_dir / "config-template.yml").is_file() and not (ext_dir / (args[2] + "-config.yml")).is_file():
+    shutil.copy(ext_dir / "config-template.yml", ext_dir / (args[2] + "-config.yml"))
+    print("Config scaffolded: .specify/extensions/" + args[2] + "/" + args[2] + "-config.yml")
+commands = []
+for manifest in sorted((ROOT / ".specify" / "extensions").glob("*/extension.yml")):
+    if reg["extensions"].get(manifest.parent.name, {}).get("enabled") is False or (ROOT / ".specify" / "SPECIFY_NOWIRE").is_file():
+        continue
+    text = manifest.read_text(encoding="utf-8")
+    block = re.split(r"\\n\\S", text.split("\\nevents:\\n", 1)[1], 1)[0] if "\\nevents:\\n" in text else ""
+    commands += re.findall(r"command:\\s*(\\S+)", block)
+if (ROOT / ".specify" / "SPECIFY_NOWIRE").is_file():
+    print("Warning: event refresh failed for 1 integration(s)")
+settings = ROOT / ".claude" / "settings.json"
+settings.parent.mkdir(parents=True, exist_ok=True)
+hooks = [{"type": "command", "command": "python3 .specify/events.py " + c, "__speckit_event__": True} for c in commands]
+settings.write_text(json.dumps({"hooks": {"PreToolUse": [{"matcher": "*", "hooks": hooks}]}}, indent=2), encoding="utf-8")
+print("Extension '" + args[2] + "' " + args[1] + "d")
+'''
+
+
+@pytest.fixture(autouse=True)
+def _speckit_environment(tmp_path_factory, monkeypatch):
+    """No user-level catalog files and no catalog variables from this machine; the stub `specify`."""
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    for var in ("SPECKIT_CATALOG_URL", "SPECKIT_PRESET_CATALOG_URL"):
+        monkeypatch.delenv(var, raising=False)
+    stub = home / "specify_stub.py"
+    stub.write_text(STUB_SPECIFY, encoding="utf-8")
+    from guardians_core import speckit
+    monkeypatch.setattr(speckit, "specify_command", lambda: [sys.executable, str(stub)])
+    return home
 
 
 def registry_text(enabled: Callable[[str, str], bool], priority: Optional[Callable[[str, str], Optional[int]]] = None,
@@ -158,6 +253,11 @@ class FakeProject:
     def registry(self) -> str:
         return (self.root / ".specify" / "extensions.yml").read_text(encoding="utf-8")
 
+    def specify_calls(self) -> List[str]:
+        """The stub `specify` calls, e.g. ['extension disable guardians', 'extension enable guardians']."""
+        log = self.root / ".specify" / "stub-specify.log"
+        return log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
+
     def runs(self) -> List[str]:
         log = self.root / ".specify" / "stub-runs.log"
         return log.read_text(encoding="utf-8").split() if log.is_file() else []
@@ -171,11 +271,14 @@ class FakeProject:
 
 def make_project(root: Path, aligned: bool, siblings: Iterable[str] = ("scopeguard", "archiguard", "auditguard"),
                  guardians: bool = True, preset: bool = True, codeowners: bool = True) -> FakeProject:
-    """aligned=True: the state after `guardians configure`; aligned=False: fresh from `bundle install`."""
+    """aligned=True: the state after `guardians configure`; aligned=False: fresh from `bundle install` after the old
+    install docs (the Guardians catalogs alone in the catalog files, the agent events not wired)."""
+    siblings = tuple(siblings)
     (root / ".specify").mkdir(parents=True, exist_ok=True)
     for ext in siblings:
         ext_dir = root / ".specify" / "extensions" / ext
         (ext_dir / "scripts" / "python").mkdir(parents=True, exist_ok=True)
+        events = "".join(f"  {event}:\n    command: {command}\n" for event, command in EVENTS.get(ext, []))
         (ext_dir / "extension.yml").write_text(textwrap.dedent(f"""\
             schema_version: "1.0"
             extension:
@@ -187,7 +290,7 @@ def make_project(root: Path, aligned: bool, siblings: Iterable[str] = ("scopegua
               speckit_version: ">=1.0.1"
             provides:
               commands: []
-            """), encoding="utf-8")
+            """) + (f"events:\n{events}" if events else ""), encoding="utf-8")
         shutil.copy(FIXTURES / f"{ext}-config.yml", ext_dir / f"{ext}-config.yml")
         stub = STUB.format(ext=ext, name=NAMES[ext], version=VERSIONS[ext], default_integration=DEFAULT_INTEGRATION[ext],
                            default_mode=DEFAULT_MODE[ext])
@@ -202,6 +305,12 @@ def make_project(root: Path, aligned: bool, siblings: Iterable[str] = ("scopegua
         p_dir.mkdir(parents=True, exist_ok=True)
         (p_dir / "preset.yml").write_text('schema_version: "1.0"\npreset:\n  id: archiguard-templates\n  version: "' + PRESET_VERSION + '"\n', encoding="utf-8")
     project = FakeProject(root)
+    project.write(".specify/integration.json", json.dumps({"integration": "claude", "installed_integrations": ["claude"]}) + "\n")
+    project.write(".specify/init-options.json", json.dumps({"ai": "claude", "integration": "claude", "script": "sh"}) + "\n")
+    for kind in ("extension", "preset"):
+        project.write(f".specify/{kind}-catalogs.yml", catalog_file(kind, seeded=aligned))
+    wired = [c for ext in siblings for _event, c in EVENTS.get(ext, [])] if aligned else []
+    project.write(".claude/settings.json", claude_settings(wired))
     if aligned:
         project.write(".specify/extensions.yml", registry_text(aligned_enabled, aligned_priority, siblings))
         project.write(".gitattributes", GITATTRIBUTES)

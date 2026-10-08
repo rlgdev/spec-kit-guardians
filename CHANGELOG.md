@@ -5,6 +5,59 @@ All notable changes to Guardians are documented here. The format follows
 [Semantic Versioning](https://semver.org/). A bundle version is a tested combination of the siblings'
 versions; the pins are listed with every release.
 
+## [Unreleased]
+
+Keeps the project's other Spec Kit extensions working next to the Guardians. Pins unchanged; the `NOT RUN` lines,
+the presets' missing-engine skip, scopeGuard's embedded warning and the siblings' own line-ending fix described in
+the guides come with the sibling releases after scopeGuard 0.4.1, archiGuard 0.1.1 and auditGuard 0.1.0, which the
+release of this version pins.
+
+### Added
+
+- `guardians verify` checks `catalogs_keep_defaults` (warn): a `.specify/extension-catalogs.yml` or
+  `preset-catalogs.yml` replaces Spec Kit's catalogs (and a user-level `~/.specify/` file); the check names the
+  catalogs such a file hides or lists as discovery-only, an extension file that lists none (Spec Kit's search,
+  update and catalog list then fail) and a file Spec Kit cannot read or refuses.
+- `guardians verify` checks `agent_events_wired` (warn): for each installed integration that Spec Kit wires agent
+  events for (claude, codex, copilot, cursor-agent, devin, gemini, opencode, qwen, tabnine, vibe in Spec Kit 1.1.1),
+  the integration's settings file carries every event of archiGuard and auditGuard that the integration has. Not
+  checked where `--events false` or a valid `.specify/integration-events.yml` entry sets them.
+- `installed` also fails for a Guardian that is disabled in Spec Kit (`specify extension disable`), and the Tools
+  line says so.
+- `guardians configure` repairs both: it appends Spec Kit's `default` (priority 1) and `community` (priority 20,
+  discovery only) catalogs to a catalog file whose entries are all family catalogs, exactly as
+  `specify ... catalog add` writes them, and it runs `specify extension disable guardians`, then
+  `specify extension enable guardians`, when the agent events are missing (Spec Kit rewires every enabled
+  extension's events on `enable`; Guardians has no hooks or events of its own). It reports only what Spec Kit
+  really wired, never leaves Guardians disabled, puts back the bytes of `.specify/extensions.yml` that Spec Kit
+  rewrites (comments, line endings), reports a `guardians-config.yml` that `enable` recreated, and leaves a JSON
+  settings file with comments alone (Spec Kit cannot merge into it; a note says so). `configure --json` lists the
+  notes. A file with other catalogs or a
+  user-level catalog file is left alone (`verify` warns with the commands); a dry run lists both repairs under
+  `Would change:`; without `specify` on PATH, on the `generic` integration or with Guardians disabled `configure`
+  prints the command in a note instead. `checks.<id>: off` turns a check and its repair off.
+
+### Changed
+
+- The install instructions (README, bundle README, getting-started guide, `bundle.yml` comment) add Spec Kit's
+  `default` and `community` catalogs before the Guardians catalog, for extensions and presets, and give the
+  bundle catalog the id `guardians`. The earlier instructions created catalog files with the Guardians entry
+  alone, which replaced Spec Kit's catalogs: every other extension of the project disappeared from
+  `specify extension search`, `info` and `update` ("not found in catalog") - nothing was uninstalled.
+- Uninstall instructions: archiGuard and auditGuard disabled first (`bundle remove` leaves their agent events
+  behind otherwise), the three catalog entries, the preset before archiGuard when installed one at a time, a
+  catalog file left as `catalogs: []`, and scopeGuard left `embedded` when it was installed before the bundle.
+- The getting-started guide: a gate that stops a command skips the other extensions' post-execution hooks; new
+  rows for the two checks and their symptoms.
+- Specification amendments A12-A17.
+
+### Fixed
+
+- `configure` keeps the line endings of the files it edits (the one most of their lines use). Spec Kit writes
+  `.specify/extensions.yml` with CRLF on Windows; rewritten with LF, `git diff` showed every hook of every other
+  extension removed and added again.
+- A catalog or config file that starts with a byte-order mark is read as Spec Kit reads it.
+
 ## [0.1.2] - 2026-10-07
 
 Pins unchanged: scopeGuard 0.4.1 · archiGuard 0.1.1 · auditGuard 0.1.0 · archiguard-templates 0.1.1.

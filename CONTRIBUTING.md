@@ -37,8 +37,11 @@ version on `main` turns the job red until the pins here follow it (step 5 of the
 The same as the siblings' (see their `CONTRIBUTING.md`): extension files at the root, `.extensionignore` for the
 rest, LF line endings, unknown config keys are errors, exit codes `0` / `1` / `2`, Keep a Changelog. In addition:
 
-- **Guardians writes three things and nothing else** (hook priorities, scopeGuard's `integration`, archiGuard's
-  `edit_guard.always_readonly`). A new cross-wiring needs the sibling's documentation to call for it first.
+- **Guardians writes three settings of the siblings and nothing else of theirs** (hook priorities, scopeGuard's
+  `integration`, archiGuard's `edit_guard.always_readonly`). A new cross-wiring needs the sibling's documentation to
+  call for it first. Its two repairs of Spec Kit's own state (Spec Kit's catalogs back in a catalog file that lists
+  only the family's; the agent events, through `specify extension disable/enable guardians`) touch nothing of
+  another extension. Every edit keeps the edited file's line ending.
 - **Interface to the siblings is their command line and config files**, never their Python modules (the YAML
   reader fallback is the one exception).
 - Every `verify` check has a test that makes it fail by one fixture change and reports it by name.

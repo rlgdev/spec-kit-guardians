@@ -15,9 +15,15 @@ One install for the three Guardians of the Spec Kit SDLC, at versions tested tog
 From a Spec Kit project (Spec Kit ≥ 1.0.3):
 
 ```bash
-specify extension catalog add https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/extensions.json --name guardians --install-allowed
-specify preset catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/presets.json    --name guardians --install-allowed
-specify bundle catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/bundles.json
+# a project catalog file REPLACES Spec Kit's own catalogs: add those first, or every other extension disappears
+# from `specify extension search`, `info` and `update`
+specify extension catalog add https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json           --name default   --priority 1  --install-allowed
+specify extension catalog add https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json --name community --priority 20 --no-install-allowed
+specify extension catalog add https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/extensions.json --name guardians --priority 10 --install-allowed
+specify preset catalog add    https://raw.githubusercontent.com/github/spec-kit/main/presets/catalog.json              --name default   --priority 1  --install-allowed
+specify preset catalog add    https://raw.githubusercontent.com/github/spec-kit/main/presets/catalog.community.json    --name community --priority 20 --no-install-allowed
+specify preset catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/presets.json    --name guardians --priority 10 --install-allowed
+specify bundle catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/bundles.json    --id guardians
 specify bundle install guardians
 ```
 
@@ -30,15 +36,18 @@ bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
 ```
 
 `configure` sets scopeGuard to `integration: embedded`, adds the audit trail to archiGuard's edit guard, runs
-the three tools' own `configure` commands in order, puts auditGuard's hooks first and last on the events they
+the three tools' own `configure` commands in order, has Spec Kit wire the agent events the bundle install leaves
+unwired (archiGuard's edit guard, auditGuard's guard), puts auditGuard's hooks first and last on the events they
 share with a gate, and ends with the alignment report. `guardians verify` runs that report alone (exit `1` on a
 failure) - locally and in CI.
 
 ## Notes
 
-- A project-scoped extension catalog **replaces** Spec Kit's built-in catalogs for that project; first-party
-  extensions (`bug`, `assess`, `git`) still install from the package. Add the built-in catalog again if you need
-  community discovery: `specify extension catalog list` shows the stack.
+- `.specify/extension-catalogs.yml` and `preset-catalogs.yml` **replace** Spec Kit's catalogs (and a user-level
+  `~/.specify/` file) for the project; they never add to them. Hence Spec Kit's `default` and `community` lines
+  above (`community` at 20, after the trusted Guardians catalog). With a user-level catalog file, add its entries
+  instead. A catalog file with only the Guardians entry hides every other extension: `guardians verify` warns
+  (`catalogs_keep_defaults`) and `guardians configure` adds Spec Kit's two back.
 - An extension already installed outside the bundle must be at the pinned version, or `bundle install` stops
   before changing anything. Remove it or install the pinned version first.
 - `integration: workflow` users add the workflows by hand (`scopeguard-sdd`, `archiguard-sdd` from the
