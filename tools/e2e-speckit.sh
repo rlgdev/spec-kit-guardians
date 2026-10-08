@@ -118,7 +118,10 @@ expect 0 specify extension list
 contains "git"
 [[ "$(grep -c "extension: git" .specify/extensions.yml)" == "$git_hooks_before" ]] || fail "the git extension's hooks changed"
 cp .specify/extension-catalogs.yml "$WORK/catalogs.yml"
-expect 0 specify extension catalog add https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json --name default --priority 1 --install-allowed
+set +e   # Spec Kit 1.1 takes an identical entry as a no-op; 1.0.x says the name already exists - neither changes the file
+specify extension catalog add https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json --name default --priority 1 --install-allowed > "$WORK/out.txt" 2>&1; code=$?
+set -e
+[[ $code -eq 0 ]] || grep -q "already exists" "$WORK/out.txt" || { cat "$WORK/out.txt"; fail "catalog add of Spec Kit's default catalog failed after configure"; }
 cmp -s .specify/extension-catalogs.yml "$WORK/catalogs.yml" || fail "configure's catalog entry differs from what catalog add writes"
 expect 0 specify extension catalog list
 contains "default"

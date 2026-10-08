@@ -166,8 +166,8 @@ def test_catalogs_of_spec_kit_are_added_back(fresh: FakeProject):
     after = fresh.path(".specify/extension-catalogs.yml").read_text(encoding="utf-8")
     assert after.startswith(before)                                   # an append: the Guardians entry is untouched
     entries = yaml.safe_load(after)["catalogs"]
-    # exactly what `specify extension catalog add <url> --name default --priority 1 --install-allowed` writes, so a
-    # later run of that command is a no-op
+    # exactly what `specify extension catalog add <url> --name default --priority 1 --install-allowed` writes (Spec Kit
+    # 1.1 takes a later run of that command as a no-op)
     assert entries[1:] == [
         {"name": "default", "url": "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json",
          "priority": 1, "install_allowed": True, "description": ""},

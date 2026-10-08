@@ -164,8 +164,8 @@ def _stack_entries(path: Path, kind: str) -> Tuple[Optional[List[Dict[str, Any]]
 
 
 def append_catalogs(text: str, catalogs: List[Tuple[str, str, int, bool]]) -> Optional[str]:
-    """Append entries to the block list under `catalogs:`, in the shape `specify ... catalog add` writes them (so a
-    later run of that command for the same catalog is a no-op). None when the file has another shape."""
+    """Append entries to the block list under `catalogs:`, in the shape `specify ... catalog add` writes them (Spec
+    Kit 1.1 then takes a later `catalog add` of the same catalog as a no-op). None when the file has another shape."""
     lines, eol = split_lines(text)
     start = next((i for i, line in enumerate(lines) if re.match(r"^catalogs:\s*(#.*)?$", line)), None)
     if start is None:
