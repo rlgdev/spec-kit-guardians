@@ -52,10 +52,14 @@ def write_text(path: Path, text: str) -> None:
         handle.write(text)
 
 
+def eol_of(text: str) -> str:
+    """The line ending most lines of the text use: CRLF or LF (LF on a tie)."""
+    return "\r\n" if 2 * text.count("\r\n") > text.count("\n") else "\n"
+
+
 def split_lines(text: str) -> Tuple[List[str], str]:
-    """Lines without their endings, plus the ending to put back (CRLF when the file uses it)."""
-    eol = "\r\n" if "\r\n" in text else "\n"
-    return text.replace("\r\n", "\n").split("\n"), eol
+    """Lines without their endings, plus the ending to put back (the one most lines use)."""
+    return text.replace("\r\n", "\n").split("\n"), eol_of(text)
 
 
 def join_lines(lines: Sequence[str], eol: str) -> str:

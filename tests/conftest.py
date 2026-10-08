@@ -123,10 +123,12 @@ else:
 '''
 
 STUB_SPECIFY = '''#!/usr/bin/env python3
-"""Stub of the Spec Kit CLI for `extension disable|enable <id>`, as Spec Kit 1.1.1 does it: the registry flag, then
-the agent events of every enabled extension into .claude/settings.json. Records each call; .specify/SPECIFY_FAIL
-names the actions that fail."""
-import json, re, sys
+"""Stub of the Spec Kit CLI for `extension disable|enable <id>`, as Spec Kit 1.1.1 does it: the registry flag, the
+hook registry rewritten with the platform's line ending, a missing config scaffolded on enable, then the agent events
+of every enabled extension into .claude/settings.json. Records each call. .specify/SPECIFY_FAIL names the actions that
+fail before anything changes; .specify/SPECIFY_FAIL_LATE the ones that fail after the registry flag changed (as an
+event-refresh error does); .specify/SPECIFY_NOWIRE makes the event refresh write nothing."""
+import json, re, shutil, sys
 from pathlib import Path
 ROOT = Path.cwd()
 args = sys.argv[1:]
@@ -134,13 +136,25 @@ with open(ROOT / ".specify" / "stub-specify.log", "a", encoding="utf-8") as log:
     log.write(" ".join(args) + "\\n")
 if len(args) != 3 or args[0] != "extension" or args[1] not in ("disable", "enable"):
     print("stub: only extension disable|enable <id>", file=sys.stderr); sys.exit(2)
-fail = ROOT / ".specify" / "SPECIFY_FAIL"
-if fail.is_file() and args[1] in fail.read_text().split():
+def listed(name):
+    path = ROOT / ".specify" / name
+    return path.is_file() and args[1] in path.read_text().split()
+if listed("SPECIFY_FAIL"):
     print("Error: " + args[1] + " failed on purpose"); sys.exit(1)
 reg_path = ROOT / ".specify" / "extensions" / ".registry"
 reg = json.loads(reg_path.read_text(encoding="utf-8")) if reg_path.is_file() else {"schema_version": "1.0", "extensions": {}}
 reg["extensions"].setdefault(args[2], {})["enabled"] = args[1] == "enable"
 reg_path.write_text(json.dumps(reg, indent=2), encoding="utf-8")
+if listed("SPECIFY_FAIL_LATE"):
+    print("Error: " + args[1] + " failed late on purpose"); sys.exit(1)
+ext_yml = ROOT / ".specify" / "extensions.yml"
+if ext_yml.is_file():
+    dumped = "".join(l for l in ext_yml.read_text(encoding="utf-8").splitlines(True) if not l.lstrip().startswith("#"))
+    ext_yml.write_text(dumped, encoding="utf-8")   # yaml.dump + write_text: no comments, the platform line ending
+ext_dir = ROOT / ".specify" / "extensions" / args[2]
+if args[1] == "enable" and (ext_dir / "config-template.yml").is_file() and not (ext_dir / (args[2] + "-config.yml")).is_file():
+    shutil.copy(ext_dir / "config-template.yml", ext_dir / (args[2] + "-config.yml"))
+    print("Config scaffolded: .specify/extensions/" + args[2] + "/" + args[2] + "-config.yml")
 commands = []
 for manifest in sorted((ROOT / ".specify" / "extensions").glob("*/extension.yml")):
     if reg["extensions"].get(manifest.parent.name, {}).get("enabled") is False or (ROOT / ".specify" / "SPECIFY_NOWIRE").is_file():
@@ -148,6 +162,8 @@ for manifest in sorted((ROOT / ".specify" / "extensions").glob("*/extension.yml"
     text = manifest.read_text(encoding="utf-8")
     block = re.split(r"\\n\\S", text.split("\\nevents:\\n", 1)[1], 1)[0] if "\\nevents:\\n" in text else ""
     commands += re.findall(r"command:\\s*(\\S+)", block)
+if (ROOT / ".specify" / "SPECIFY_NOWIRE").is_file():
+    print("Warning: event refresh failed for 1 integration(s)")
 settings = ROOT / ".claude" / "settings.json"
 settings.parent.mkdir(parents=True, exist_ok=True)
 hooks = [{"type": "command", "command": "python3 .specify/events.py " + c, "__speckit_event__": True} for c in commands]

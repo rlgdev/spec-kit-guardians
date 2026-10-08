@@ -22,8 +22,9 @@ versions tested together, plus a thin extension with two commands:
   documents but cannot do for the others: scopeGuard `integration: embedded` (archiGuard runs the scope gate),
   the audit trail in archiGuard's edit guard, auditGuard's hooks first and last on the events they share.
 - `guardians verify` — fourteen checks that the three configurations agree (versions, integration, hook order,
-  base branch, edit guard, modes, `.gitattributes`, CODEOWNERS) and that Spec Kit's catalogs and agent events
-  still serve every extension. Exit `1` on a failure; for CI.
+  base branch, edit guard, modes, `.gitattributes`, CODEOWNERS), that Spec Kit's catalog files still list the
+  catalogs of every other extension, and that the agent events carry archiGuard's and auditGuard's guards. Exit `1`
+  on a failure; for CI.
 
 Everything else stays where it is: each Guardian keeps its own engine, config file, release cadence and
 documentation. Guardians writes three settings of the siblings and nothing else of theirs: hook priorities in
@@ -105,7 +106,7 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
   Changed:
     .specify/extensions/scopeguard/scopeguard-config.yml: integration: inline -> embedded (archiGuard runs the scope gate)
     .specify/extensions/archiguard/archiguard-config.yml: edit_guard.always_readonly += audit/**, .specify/extensions/auditguard/**
-    agent events of archiGuard, auditGuard for claude: wired by Spec Kit (specify extension disable guardians && specify extension enable guardians)
+    agent events of archiGuard, auditGuard for claude: wired by Spec Kit (specify extension disable guardians, then specify extension enable guardians; it refreshes every enabled extension's events)
     .specify/extensions.yml: 20 hook priorities set: auditguard after_* 10 -> 90 (10), auditguard before_* 10 -> 1 (10)
 
   Tools:
@@ -145,13 +146,22 @@ Two repairs of Spec Kit's own state, so the Guardians never cost the project its
   catalogs (what older install instructions created) hides every other extension from Spec Kit's search,
   `info` and `update`. `configure` appends Spec Kit's `default` (priority 1) and `community` (20, discovery only)
   exactly as `specify extension catalog add` writes them. A file with any other catalog, or a project with a
-  user-level catalog file in `~/.specify/`, is left alone: `verify` names what it hides.
+  user-level catalog file in `~/.specify/`, is left alone: `verify` warns and names the commands.
 - **Agent events.** `specify bundle install` does not wire the extensions' agent events (`extension add` does), so
   archiGuard's edit guard and auditGuard's guard and session records would never run. When they are missing for
-  an integration that has them, `configure` runs `specify extension disable guardians && specify extension enable
+  an integration that has them, `configure` runs `specify extension disable guardians, then specify extension enable
   guardians`: Spec Kit rewires every enabled extension's events on `enable`, and Guardians has no hooks or events
-  of its own. Without `specify` on PATH, on the `generic` integration or with Guardians disabled it prints that
-  command instead.
+  of its own. Spec Kit rewrites `.specify/extensions.yml` then (same data, without comments, the platform's line
+  ending); `configure` puts the file's own bytes back, and reports a `guardians-config.yml` that `enable` recreated
+  from the template. A JSON settings file with comments is left alone: Spec Kit cannot add events to it, and the
+  note says so. It lists only what Spec
+  Kit really wired; a failure leaves Guardians enabled and is named in a note. Without `specify` on PATH, on the
+  `generic` integration (Spec Kit would rewrite every extension's generic commands) or with Guardians disabled it
+  prints the command instead, also with `--dry-run`.
+
+`checks.catalogs_keep_defaults: off` or `checks.agent_events_wired: off` in `guardians-config.yml` turns the
+check and its repair off (a catalog policy that replaces Spec Kit's catalogs on purpose, events you manage
+yourself).
 
 Why the hook order: on an event two Guardians share, auditGuard must record the start before a gate runs and the
 end after the gate's verdict - otherwise `command.finished` misses that verdict until the next hook. Spec Kit runs
@@ -163,8 +173,8 @@ matters as soon as archiGuard runs through hooks.
 
 | Check | Default | Fails when |
 |-------|---------|-----------|
-| `installed` | fail | one of the four extensions is missing |
-| `catalogs_keep_defaults` | warn | `.specify/extension-catalogs.yml` or `preset-catalogs.yml` lacks a catalog it replaces (Spec Kit's `default` and `community`, or the entries of the user-level file in `~/.specify/`), or the extension file lists none (every catalog command fails) |
+| `installed` | fail | one of the four extensions is missing, or disabled in Spec Kit (`specify extension disable`: no hooks, commands or agent events) |
+| `catalogs_keep_defaults` | warn | `.specify/extension-catalogs.yml` or `preset-catalogs.yml` lacks a catalog it replaces (Spec Kit's `default` and `community`, or the entries of the user-level file in `~/.specify/`) or lists an install-allowed one as discovery-only; the extension file lists none (Spec Kit's search, update and catalog list fail); a file Spec Kit cannot read or refuses (a non-https URL, a priority that is no integer) |
 | `preset_matches_integration` | fail | archiGuard says `inline` without `archiguard-templates` (it silently falls back to hooks); the preset is installed while archiGuard runs through hooks (gates twice); `scopeguard-templates` is installed |
 | `versions_in_range` | fail | scopeGuard's version is outside archiGuard's `gates.scope.version`, or a sibling's version is outside auditGuard's `collectors.<id>.version` |
 | `scopeguard_embedded` | fail | archiGuard runs the scope gate but scopeGuard is not `embedded` |
@@ -173,7 +183,7 @@ matters as soon as archiGuard runs through hooks.
 | `hooks_match_integration` | warn | a tool has hooks enabled although its integration is not `hooks`, or none enabled although it is |
 | `git_base_agrees` | fail | archiGuard `git.base` ≠ auditGuard `golden.git.base` - two files, a person decides |
 | `edit_guard_covers_audit` | fail | archiGuard's edit guard is off or does not list auditGuard's read-only paths |
-| `agent_events_wired` | warn | an installed integration that takes agent events (Spec Kit 1.1.1: claude, codex, copilot, cursor-agent, devin, gemini, opencode, qwen, tabnine, vibe) lacks archiGuard's or auditGuard's events in its settings file; not checked where `--events false` or `.specify/integration-events.yml` sets them |
+| `agent_events_wired` | warn | an installed integration that takes agent events (Spec Kit 1.1.1: claude, codex, copilot, cursor-agent, devin, gemini, opencode, qwen, tabnine, vibe) lacks one of archiGuard's or auditGuard's events in its settings file (each event the integration has, so the edit guard twice: before and after a tool); not checked where `--events false` or `.specify/integration-events.yml` sets them |
 | `modes_agree` | warn | scopeGuard `mode` ≠ archiGuard `mode` (auditGuard's `record`/`enforce` means something else and is only shown) |
 | `gitattributes` | warn | auditGuard's three `-text` lines are missing |
 | `codeowners` | warn | a CODEOWNERS file exists but names no owner for `audit/`, `.specify/standards/`, `.specify/archiguard/` or `.specify/extensions/` |
@@ -256,6 +266,8 @@ e2e against the new tags, release.
 ## Uninstall
 
 ```bash
+specify extension disable archiguard  # first: Spec Kit removes their agent events from the agent's settings
+specify extension disable auditguard  #   (bundle remove does not, and the agent would call missing commands)
 specify bundle remove guardians       # removes what the bundle installed (the preset too) and nothing another bundle needs
 specify extension catalog remove guardians
 specify preset catalog remove guardians
@@ -263,15 +275,17 @@ specify bundle catalog remove https://raw.githubusercontent.com/rlgdev/spec-kit-
 ```
 
 - Installed one at a time (without the bundle)? Remove the preset **first**, then the extensions:
-  `specify preset remove archiguard-templates`, then `specify extension remove guardians` and the three siblings.
-  The preset wraps `/speckit.plan`, `/speckit.tasks` and `/speckit.implement` around archiGuard; left behind, those
-  commands only report `archiGuard not installed - skipped`.
-- A catalog file left as `catalogs: []` (the Guardians entry was its only one) makes every `specify extension`
-  catalog command fail: delete `.specify/extension-catalogs.yml`, and Spec Kit uses its own catalogs again.
+  `specify preset remove archiguard-templates`, then `specify extension remove guardians` and the three siblings
+  (`extension remove` takes their agent events along). The preset wraps `/speckit.plan`, `/speckit.tasks`,
+  `/speckit.implement` and `/speckit.analyze` around archiGuard; left behind, those commands fail at the missing
+  runner (archiGuard's preset after 0.1.1 reports `archiGuard not installed - skipped` and goes on).
+- A catalog file left as `catalogs: []` (the Guardians entry was its only one) makes Spec Kit's extension search,
+  update and catalog list fail: delete `.specify/extension-catalogs.yml`, and Spec Kit uses its own catalogs again.
 - Keeping scopeGuard on its own (it was installed before the bundle, so the bundle leaves it)? Guardians set it
   to `integration: embedded`, which runs only inside archiGuard: set `integration: inline` in
-  `.specify/extensions/scopeguard/scopeguard-config.yml`, add its `scopeguard-templates` preset and run its
-  `configure` (scopeGuard's `configure` warns while it is embedded without archiGuard).
+  `.specify/extensions/scopeguard/scopeguard-config.yml`, add its preset (`specify preset add --from
+  https://github.com/rlgdev/spec-kit-scopeguard/releases/latest/download/scopeguard-preset.zip`) and run its
+  `configure` (scopeGuard after 0.4.1 warns while it is embedded without archiGuard).
 - Guardians' other edits stay in place (they are the siblings' documented settings); revert them with
   `git checkout` of the two config files and `.specify/extensions.yml` if you remove the siblings too.
 

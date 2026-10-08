@@ -64,8 +64,9 @@ class Report:
             if not tool.get("installed"):
                 lines.append(f"    {name} : not installed")
                 continue
+            off = "" if tool.get("enabled", True) else " | disabled in Spec Kit"
             if ext == "guardians":
-                lines.append(f"    {name} : {tool['version']}")
+                lines.append(f"    {name} : {tool['version']}{off}")
                 continue
             integration = tool["integration"]
             if tool.get("effective_integration") and tool["effective_integration"] != integration:
@@ -76,7 +77,7 @@ class Report:
             if ext == "archiguard":
                 extra += f" | preset {'installed' if tool.get('preset') else 'missing'}"
             lines.append(f"    {name} : {tool['version']} | integration {integration} | mode {tool['mode']} | "
-                         f"hooks {tool['hooks_on']}/{tool['hooks']}{extra}")
+                         f"hooks {tool['hooks_on']}/{tool['hooks']}{extra}{off}")
             if tool.get("status_error"):
                 lines.append(f"    {'':<10}   NOTE: its configure --dry-run --json failed: {tool['status_error']}")
         lines += ["", "  Checks:"]
@@ -103,7 +104,7 @@ def _tools(project: Project, report: Report) -> None:
         if not sib.installed:
             report.tools[ext] = {"installed": False}
             continue
-        tool: Dict[str, Any] = {"installed": True, "version": sib.version}
+        tool: Dict[str, Any] = {"installed": True, "version": sib.version, "enabled": project.extension_enabled(ext)}
         if ext != "guardians":
             on, registered = project.hook_counts(ext)
             tool.update({"integration": sib.integration(), "effective_integration": sib.effective_integration(),
@@ -128,8 +129,16 @@ def _configure_fix(sib: Sibling, what: str) -> str:
 
 def check_installed(project: Project, c: Check) -> Check:
     missing = [ext for ext in GUARDIANS if not project.sibling(ext).installed]
+    disabled = [ext for ext in GUARDIANS if project.sibling(ext).installed and not project.extension_enabled(ext)]
+    problems, fixes = [], []
     if missing:
-        return c.problem(f"not installed: {', '.join(missing)}", "specify bundle install guardians")
+        problems.append(f"not installed: {', '.join(missing)}")
+        fixes.append("specify bundle install guardians")
+    if disabled:
+        problems.append(f"disabled in Spec Kit: {', '.join(disabled)} (no hooks, commands or agent events)")
+        fixes += [f"specify extension enable {ext}" for ext in disabled]
+    if problems:
+        return c.problem("; ".join(problems), " / ".join(fixes))
     return c.ok("scopeguard, archiguard, auditguard, guardians")
 
 
@@ -138,32 +147,47 @@ def check_catalogs_keep_defaults(project: Project, c: Check) -> Check:
     problems, fixes, seen = [], [], []
     for kind in speckit.CATALOGS:
         stack = speckit.CatalogStack(project.root, kind)
-        if stack.env:
+        hidden, restricted = stack.hidden(), stack.restricted()
+        here = f" ({stack.env} is set: on this machine Spec Kit uses that one catalog)" if stack.env else ""
+        if stack.env and stack.entries is None and not stack.error and not stack.empty:
             seen.append(f"{kind}s: {stack.env} is set (Spec Kit uses that one catalog)")
         elif stack.error:
             problems.append(f"cannot read {stack.label}: {stack.error}")
-            fixes.append(f"correct {stack.label} (Spec Kit cannot read it either)")
+            fixes.append(f"correct {stack.label}")
         elif stack.empty:
-            problems.append(f"{stack.label} lists no catalog: every Spec Kit command that reads the {kind} catalogs fails")
+            problems.append(f"{stack.label} lists no catalog: every Spec Kit command that reads the {kind} catalogs "
+                            "(search, update, catalog list) fails")
             fixes.append(f"delete {stack.label} (Spec Kit then uses its own catalogs)")
+        elif stack.ignored:
+            seen.append(f"{kind}s: {stack.label} lists no catalog, so Spec Kit uses its own")
+        elif stack.entries is None and stack.user_path.is_file():
+            seen.append(f"{kind}s: the user-level ~/.specify/{stack.path.name} (no {stack.label})")
         elif stack.entries is None:
             seen.append(f"{kind}s: Spec Kit's own catalogs (no {stack.label})")
-        elif stack.hidden():
-            hidden = ", ".join(name for name, _url in stack.hidden())
-            problems.append(f"{stack.label} replaces Spec Kit's {kind} catalogs and lacks {hidden}: other {kind}s are "
-                            f"missing from search, info and update")
-            if stack.repairable():
-                fixes.append(f"guardians configure (adds {hidden} back to {stack.label})")
-            elif stack.user_path.is_file():
-                fixes.append(f"copy the entries of ~/.specify/{stack.path.name} into {stack.label}")
-            else:
-                fixes.append((stack.add_commands() or f"add {hidden} to {stack.label}")
-                             + " - or switch this check off if the replacement is deliberate")
+        elif hidden or restricted:
+            if hidden:
+                names = ", ".join(cat[0] for cat in hidden)
+                problems.append(f"{stack.label} replaces Spec Kit's {kind} catalogs and lacks {names}: other {kind}s are "
+                                f"missing from search, info and update{here}")
+                if stack.repairable():
+                    fixes.append(f"guardians configure (adds {names} back to {stack.label})")
+                elif stack.user_path.is_file():
+                    fixes.append(f"copy the entries of ~/.specify/{stack.path.name} into {stack.label}")
+                else:
+                    fixes.append((stack.add_commands() or f"add {names} to {stack.label}")
+                                 + " - or switch this check off if the replacement is deliberate")
+            for catalog, entry_name in restricted:
+                problems.append(f"{stack.label} lists {entry_name} as discovery-only (install_allowed: false): Spec Kit "
+                                f"refuses to install or update {kind}s from it")
+                fixes.append(f"{CLI_REMOVE[kind]} {entry_name}, then {stack.add_command(catalog)}")
         else:
-            seen.append(f"{kind}s: {stack.label} keeps {', '.join(name for name, _url in stack.replaced())}")
+            seen.append(f"{kind}s: {stack.label} keeps {', '.join(cat[0] for cat in stack.replaced())}{here}")
     if problems:
         return c.problem("; ".join(problems), " / ".join(fixes))
     return c.ok("; ".join(seen))
+
+
+CLI_REMOVE = {"extension": "specify extension catalog remove", "preset": "specify preset catalog remove"}
 
 
 def check_preset_matches_integration(project: Project, c: Check) -> Check:
@@ -358,7 +382,19 @@ def check_agent_events_wired(project: Project, c: Check) -> Check:
         else:
             seen.append(f"{item.key}: Spec Kit wires no agent events for it")
     if problems:
-        return c.problem("; ".join(problems), f"guardians configure (runs {speckit.WIRE_EVENTS})")
+        g = project.sibling("guardians")
+        blocker = speckit.toggle_blocker(project.root, g.installed, project.extension_enabled("guardians"))
+        unreadable = [i for i in wiring if i.state == "missing" and i.unreadable]
+        if unreadable:
+            fix = (f"make {', '.join(i.file for i in unreadable if i.file)} plain JSON (Spec Kit cannot add its events to "
+                   "a file with comments), then guardians configure")
+        elif blocker.startswith("the generic integration"):
+            fix = f"{speckit.WIRE_EVENTS} ({blocker}; guardians configure leaves that to you)"
+        elif blocker.startswith("Guardians is disabled"):
+            fix = "specify extension enable guardians (Spec Kit then wires the events)"
+        else:
+            fix = f"guardians configure (runs {speckit.WIRE_EVENTS})"
+        return c.problem("; ".join(problems), fix)
     if not any(item.state == "wired" for item in wiring):
         return c.na("; ".join(seen))
     return c.ok("; ".join(seen))

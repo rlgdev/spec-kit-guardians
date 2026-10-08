@@ -23,7 +23,7 @@ hook_priority:
 # Severity of each verify check: fail (exit 1) | warn (reported, exit 0) | off
 checks:
   installed: fail                  # the four extensions are installed
-  catalogs_keep_defaults: warn     # a project catalog file still lists the Spec Kit catalogs it replaces
+  catalogs_keep_defaults: warn     # a catalog file keeps the Spec Kit catalogs it replaces (off: no catalog repair either)
   preset_matches_integration: fail # archiguard-templates present iff archiGuard runs inline; no scopeguard-templates
   versions_in_range: fail          # the siblings accept each other's installed versions
   scopeguard_embedded: fail        # scopeGuard is embedded when archiGuard runs the scope gate
@@ -32,7 +32,7 @@ checks:
   hooks_match_integration: warn    # enabled hooks only for a tool whose integration is hooks
   git_base_agrees: fail            # archiGuard git.base == auditGuard golden.git.base
   edit_guard_covers_audit: fail    # archiGuard's edit guard protects the audit trail too
-  agent_events_wired: warn         # Spec Kit wired archiGuard's and auditGuard's agent events (edit guard, audit guard)
+  agent_events_wired: warn         # archiGuard's and auditGuard's agent events are wired (off: no rewiring either)
   modes_agree: warn                # scopeGuard mode == archiGuard mode
   gitattributes: warn              # auditGuard's .gitattributes lines are present
   codeowners: warn                 # CODEOWNERS (when present) names owners for audit/, standards, archiguard, extensions

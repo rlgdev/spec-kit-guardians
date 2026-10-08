@@ -108,7 +108,7 @@ contains "archiguard-config.yml: edit_guard.always_readonly += audit/**, .specif
 contains "extensions.yml: 20 hook priorities set"
 contains ".specify/extension-catalogs.yml: catalogs += default (priority 1), community (priority 20)"
 contains ".specify/preset-catalogs.yml: catalogs += default (priority 1), community (priority 20)"
-contains "agent events of archiGuard, auditGuard for claude: wired by Spec Kit (specify extension disable guardians && specify extension enable guardians)"
+contains "agent events of archiGuard, auditGuard for claude: wired by Spec Kit (specify extension disable guardians, then specify extension enable guardians; it refreshes every enabled extension's events)"
 contains "[OK]   catalogs_keep_defaults"
 contains "[OK]   agent_events_wired"
 contains "RESULT: OK"
