@@ -5,6 +5,45 @@ All notable changes to Guardians are documented here. The format follows
 [Semantic Versioning](https://semver.org/). A bundle version is a tested combination of the siblings'
 versions; the pins are listed with every release.
 
+## [Unreleased]
+
+Keeps the project's other Spec Kit extensions working next to the Guardians. Pins unchanged.
+
+### Added
+
+- `guardians verify` checks `catalogs_keep_defaults` (warn): a `.specify/extension-catalogs.yml` or
+  `preset-catalogs.yml` replaces Spec Kit's catalogs (and a user-level `~/.specify/` file); the check names the
+  catalogs such a file hides, an extension file that lists none (every catalog command then fails) and a file that
+  cannot be read.
+- `guardians verify` checks `agent_events_wired` (warn): for each installed integration that Spec Kit wires agent
+  events for (claude, codex, copilot, cursor-agent, devin, gemini, opencode, qwen, tabnine, vibe in Spec Kit 1.1.1),
+  the integration's settings file carries archiGuard's and auditGuard's events. Not checked where `--events false`
+  or `.specify/integration-events.yml` sets them.
+- `guardians configure` repairs both: it appends Spec Kit's `default` (priority 1) and `community` (priority 20,
+  discovery only) catalogs to a catalog file whose entries are all family catalogs, exactly as
+  `specify ... catalog add` writes them, and it runs `specify extension disable guardians && specify extension
+  enable guardians` when the agent events are missing (Spec Kit rewires every enabled extension's events on
+  `enable`; Guardians has no hooks or events of its own). A file with other catalogs, a user-level catalog file,
+  a dry run, no `specify` on PATH, the `generic` integration or a disabled Guardians get a note instead.
+
+### Changed
+
+- The install instructions (README, bundle README, getting-started guide, `bundle.yml` comment) add Spec Kit's
+  `default` and `community` catalogs before the Guardians catalog, for extensions and presets, and give the
+  bundle catalog the id `guardians`. The earlier instructions created catalog files with the Guardians entry
+  alone, which replaced Spec Kit's catalogs: every other extension of the project disappeared from
+  `specify extension search`, `info` and `update` ("not found in catalog") - nothing was uninstalled.
+- Uninstall instructions: the three catalog entries, the preset before archiGuard when installed one at a time,
+  a catalog file left as `catalogs: []`, and scopeGuard left `embedded` when it was installed before the bundle.
+- The getting-started guide: a gate that stops a command skips the other extensions' post-execution hooks (the
+  gates now list them under `NOT RUN`); new rows for the two checks and their symptoms.
+- Specification amendments A12-A16.
+
+### Fixed
+
+- `configure` keeps the line endings of the files it edits. Spec Kit writes `.specify/extensions.yml` with CRLF on
+  Windows; rewritten with LF, `git diff` showed every hook of every other extension removed and added again.
+
 ## [0.1.2] - 2026-10-07
 
 Pins unchanged: scopeGuard 0.4.1 · archiGuard 0.1.1 · auditGuard 0.1.0 · archiguard-templates 0.1.1.

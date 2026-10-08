@@ -50,6 +50,16 @@ class Sibling:
                 self._version = "?"
         return self._version
 
+    def event_commands(self) -> List[str]:
+        """The commands of the agent events its manifest declares (`events:`), which Spec Kit wires into the agent."""
+        try:
+            events = yamlio.get(yamlio.load_file(self.manifest), "events", default={}) if self.installed else {}
+        except GuardiansError:
+            return []
+        if not isinstance(events, dict):
+            return []
+        return [str(e["command"]) for e in events.values() if isinstance(e, dict) and e.get("command")]
+
     def config(self) -> Dict[str, Any]:
         """The committed config file (not the workstation overrides - those show in status())."""
         if self._config is None:
@@ -161,6 +171,29 @@ class Project:
     @property
     def installed(self) -> List[str]:
         return [ext for ext in GUARDIANS if self.siblings[ext].installed]
+
+    def extension_enabled(self, ext_id: str) -> bool:
+        """Spec Kit's registry flag (`specify extension disable` clears it); an extension it does not track counts as
+        enabled, as Spec Kit's event refresh counts it."""
+        data = None
+        path = self.root / ".specify" / "extensions" / ".registry"
+        if path.is_file():
+            try:
+                data = json.loads(read_text(path))
+            except (OSError, ValueError):
+                data = None
+        entry = data.get("extensions", {}).get(ext_id) if isinstance(data, dict) and isinstance(data.get("extensions"), dict) else None
+        return not (isinstance(entry, dict) and entry.get("enabled") is False)
+
+    def declared_events(self) -> Dict[str, List[str]]:
+        """Installed, enabled Guardians -> the commands of their agent events (archiGuard and auditGuard declare some)."""
+        out: Dict[str, List[str]] = {}
+        for ext in SIBLINGS:
+            sib = self.sibling(ext)
+            commands = sib.event_commands() if sib.installed and self.extension_enabled(ext) else []
+            if commands:
+                out[ext] = commands
+        return out
 
     def preset_installed(self, preset_id: str) -> bool:
         return (self.root / ".specify" / "presets" / preset_id).is_dir()

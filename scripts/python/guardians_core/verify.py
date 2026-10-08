@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from . import __version__
+from . import speckit
 from .common import GUARDIANS, NAMES, SIBLINGS, GuardiansError, rel, version_satisfies
 from .config import CHECKS, Config
 from .siblings import (ARCHIGUARD_READONLY, ARCHIGUARD_SCOPE_RANGE, AUDITGUARD_COLLECTOR_RANGES,
@@ -130,6 +131,39 @@ def check_installed(project: Project, c: Check) -> Check:
     if missing:
         return c.problem(f"not installed: {', '.join(missing)}", "specify bundle install guardians")
     return c.ok("scopeguard, archiguard, auditguard, guardians")
+
+
+def check_catalogs_keep_defaults(project: Project, c: Check) -> Check:
+    """A project catalog file replaces Spec Kit's catalogs: does it still list the ones it replaces?"""
+    problems, fixes, seen = [], [], []
+    for kind in speckit.CATALOGS:
+        stack = speckit.CatalogStack(project.root, kind)
+        if stack.env:
+            seen.append(f"{kind}s: {stack.env} is set (Spec Kit uses that one catalog)")
+        elif stack.error:
+            problems.append(f"cannot read {stack.label}: {stack.error}")
+            fixes.append(f"correct {stack.label} (Spec Kit cannot read it either)")
+        elif stack.empty:
+            problems.append(f"{stack.label} lists no catalog: every Spec Kit command that reads the {kind} catalogs fails")
+            fixes.append(f"delete {stack.label} (Spec Kit then uses its own catalogs)")
+        elif stack.entries is None:
+            seen.append(f"{kind}s: Spec Kit's own catalogs (no {stack.label})")
+        elif stack.hidden():
+            hidden = ", ".join(name for name, _url in stack.hidden())
+            problems.append(f"{stack.label} replaces Spec Kit's {kind} catalogs and lacks {hidden}: other {kind}s are "
+                            f"missing from search, info and update")
+            if stack.repairable():
+                fixes.append(f"guardians configure (adds {hidden} back to {stack.label})")
+            elif stack.user_path.is_file():
+                fixes.append(f"copy the entries of ~/.specify/{stack.path.name} into {stack.label}")
+            else:
+                fixes.append((stack.add_commands() or f"add {hidden} to {stack.label}")
+                             + " - or switch this check off if the replacement is deliberate")
+        else:
+            seen.append(f"{kind}s: {stack.label} keeps {', '.join(name for name, _url in stack.replaced())}")
+    if problems:
+        return c.problem("; ".join(problems), " / ".join(fixes))
+    return c.ok("; ".join(seen))
 
 
 def check_preset_matches_integration(project: Project, c: Check) -> Check:
@@ -302,6 +336,39 @@ def check_edit_guard_covers_audit(project: Project, c: Check) -> Check:
     return c.ok(f"archiGuard's edit guard covers {', '.join(au.audit_readonly())}")
 
 
+def check_agent_events_wired(project: Project, c: Check) -> Check:
+    """archiGuard's edit guard and auditGuard's events run only when Spec Kit wired them into the agent's settings."""
+    declared = project.declared_events()
+    if not declared:
+        return c.na("no installed Guardian declares agent events")
+    wiring = speckit.event_wiring(project.root, declared)
+    if not wiring:
+        return c.na("no integration recorded in .specify/integration.json")
+    problems, seen = [], []
+    for item in wiring:
+        if item.state == "missing":
+            problems.append(f"the agent events of {', '.join(NAMES[e] for e in item.missing)} are not wired for "
+                            f"{item.key} ({item.file}): {_event_effect(item.missing)} never run")
+        elif item.state == "wired":
+            seen.append(f"{item.key}: {', '.join(NAMES[e] for e in declared)} in {item.file}")
+        elif item.state == "off":
+            seen.append(f"{item.key}: agent events switched off (--events false)")
+        elif item.state == "override":
+            seen.append(f"{item.key}: agent events set by {speckit.EVENTS_OVERRIDE.as_posix()}")
+        else:
+            seen.append(f"{item.key}: Spec Kit wires no agent events for it")
+    if problems:
+        return c.problem("; ".join(problems), f"guardians configure (runs {speckit.WIRE_EVENTS})")
+    if not any(item.state == "wired" for item in wiring):
+        return c.na("; ".join(seen))
+    return c.ok("; ".join(seen))
+
+
+def _event_effect(missing: List[str]) -> str:
+    parts = {"archiguard": "archiGuard's edit guard", "auditguard": "auditGuard's guard and session records"}
+    return ", ".join(parts.get(ext, f"{NAMES.get(ext, ext)}'s events") for ext in missing)
+
+
 def check_modes_agree(project: Project, c: Check) -> Check:
     sg, ag, au = (project.sibling(e) for e in SIBLINGS)
     if not (sg.installed and ag.installed):
@@ -360,6 +427,7 @@ def check_codeowners(project: Project, c: Check) -> Check:
 
 CHECK_FUNCTIONS = {
     "installed": check_installed,
+    "catalogs_keep_defaults": check_catalogs_keep_defaults,
     "preset_matches_integration": check_preset_matches_integration,
     "versions_in_range": check_versions_in_range,
     "scopeguard_embedded": check_scopeguard_embedded,
@@ -368,6 +436,7 @@ CHECK_FUNCTIONS = {
     "hooks_match_integration": check_hooks_match_integration,
     "git_base_agrees": check_git_base_agrees,
     "edit_guard_covers_audit": check_edit_guard_covers_audit,
+    "agent_events_wired": check_agent_events_wired,
     "modes_agree": check_modes_agree,
     "gitattributes": check_gitattributes,
     "codeowners": check_codeowners,

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # End-to-end check against a real Spec Kit install (used by CI; runnable locally):
-#   1. specify init; the three siblings from checkouts at the pinned tags (--dev), archiGuard's preset, Guardians (--dev)
-#   2. verify on the fresh install fails (scopeguard_embedded, edit_guard_covers_audit)
-#   3. configure: the three files change as the specification says (US2); verify passes; a second configure changes nothing
+#   1. specify init with Spec Kit's git extension; the three siblings from checkouts at the pinned tags (--dev),
+#      archiGuard's preset, Guardians (--dev); then the state the old install docs and a bundle install leave: the
+#      Guardians catalogs alone in the catalog files, the agent events not wired
+#   2. verify on the fresh install fails (scopeguard_embedded, edit_guard_covers_audit) and warns (catalogs, events)
+#   3. configure: the three files change as the specification says (US2), Spec Kit's catalogs are back, Spec Kit wired
+#      the agent events, the git extension is untouched; verify passes; a second configure changes nothing
 #   4. a disagreement (auditGuard golden.git.base) is found and named
 #   5. the bundle manifest validates offline; `specify bundle install bundle/bundle.yml --offline` sees every pin already present
 #
@@ -49,7 +52,7 @@ ARCHIGUARD_DIR="$(checkout archiguard ARCHIGUARD_SRC ARCHIGUARD_REF)"
 AUDITGUARD_DIR="$(checkout auditguard AUDITGUARD_SRC AUDITGUARD_REF)"
 
 cd "$WORK"
-specify init lab --integration claude --script sh --ignore-agent-tools --non-interactive >/dev/null
+specify init lab --integration claude --script sh --ignore-agent-tools --non-interactive --extension git >/dev/null
 cd lab
 git init -q -b main && git config user.email e2e@example.com && git config user.name e2e && git config commit.gpgsign false
 for dir in "$SCOPEGUARD_DIR" "$ARCHIGUARD_DIR" "$AUDITGUARD_DIR" "$REPO"; do
@@ -67,6 +70,26 @@ done
 grep -Rq "guardians.sh configure" .claude || { find .claude -maxdepth 2 | head -40; fail "guardians commands not rendered for the agent"; }
 expect 0 "${G[@]}" version
 contains "Guardians"
+grep -q "speckit.archiguard.editguard" .claude/settings.json || fail "extension add did not wire the agent events"
+expect 0 specify extension list
+contains "git"
+git_hooks_before="$(grep -c "extension: git" .specify/extensions.yml)"
+
+echo "== the state of the old install docs and a bundle install"
+GURL=https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog
+expect 0 specify extension catalog add "$GURL/extensions.json" --name guardians --priority 10 --install-allowed
+expect 0 specify preset catalog add "$GURL/presets.json" --name guardians --priority 10 --install-allowed
+"$PY" - <<'PY'
+import json
+path = ".claude/settings.json"            # drop Spec Kit's event entries: `specify bundle install` writes none
+data = json.load(open(path, encoding="utf-8"))
+for event, groups in list(data.get("hooks", {}).items()):
+    for group in groups:
+        group["hooks"] = [h for h in group.get("hooks", []) if not h.get("__speckit_event__")]
+    data["hooks"][event] = [g for g in groups if g["hooks"]]
+json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
+PY
+grep -q "speckit.archiguard.editguard" .claude/settings.json && fail "could not unwire the agent events"
 
 echo "== verify on the fresh install"
 expect 1 "${G[@]}" verify
@@ -74,6 +97,8 @@ contains "[FAIL] scopeguard_embedded"
 contains "[FAIL] edit_guard_covers_audit"
 contains "[OK]   installed"
 contains "[OK]   versions_in_range"
+contains "[WARN] catalogs_keep_defaults      .specify/extension-catalogs.yml replaces Spec Kit's extension catalogs and lacks default, community"
+contains "[WARN] agent_events_wired          the agent events of archiGuard, auditGuard are not wired for claude (.claude/settings.json)"
 git add -A >/dev/null 2>&1 && git commit -qm "fresh install" >/dev/null
 
 echo "== configure"
@@ -81,7 +106,23 @@ expect 0 "${G[@]}" configure
 contains "scopeguard-config.yml: integration: inline -> embedded"
 contains "archiguard-config.yml: edit_guard.always_readonly += audit/**, .specify/extensions/auditguard/**"
 contains "extensions.yml: 20 hook priorities set"
+contains ".specify/extension-catalogs.yml: catalogs += default (priority 1), community (priority 20)"
+contains ".specify/preset-catalogs.yml: catalogs += default (priority 1), community (priority 20)"
+contains "agent events of archiGuard, auditGuard for claude: wired by Spec Kit (specify extension disable guardians && specify extension enable guardians)"
+contains "[OK]   catalogs_keep_defaults"
+contains "[OK]   agent_events_wired"
 contains "RESULT: OK"
+grep -q "speckit.archiguard.editguard" .claude/settings.json || fail "the edit guard is not wired after configure"
+grep -q "speckit.auditguard.guard" .claude/settings.json || fail "the audit guard is not wired after configure"
+expect 0 specify extension list
+contains "git"
+[[ "$(grep -c "extension: git" .specify/extensions.yml)" == "$git_hooks_before" ]] || fail "the git extension's hooks changed"
+cp .specify/extension-catalogs.yml "$WORK/catalogs.yml"
+expect 0 specify extension catalog add https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json --name default --priority 1 --install-allowed
+cmp -s .specify/extension-catalogs.yml "$WORK/catalogs.yml" || fail "configure's catalog entry differs from what catalog add writes"
+expect 0 specify extension catalog list
+contains "default"
+contains "community"
 grep -q "^integration: embedded" .specify/extensions/scopeguard/scopeguard-config.yml || fail "scopeGuard not embedded"
 grep -q '"audit/\*\*"' .specify/extensions/archiguard/archiguard-config.yml || fail "edit guard does not cover audit/"
 "$PY" - <<'PY'

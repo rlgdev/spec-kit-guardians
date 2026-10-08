@@ -1,10 +1,13 @@
 """guardians configure: cross-wire, run the three configures in order, order the hooks, report.
 
 Order of work (why: scopeGuard's own configure must already see `embedded` so it switches its hooks off):
-  1. cross-wiring edits   - scopeGuard `integration: embedded`; archiGuard's edit guard covers the audit trail
+  1. cross-wiring edits   - scopeGuard `integration: embedded`; archiGuard's edit guard covers the audit trail;
+                            Spec Kit's catalogs back in a catalog file that lists only the family's
   2. the siblings' configure commands, in the configured order
-  3. hook priorities in .specify/extensions.yml (auditGuard first and last on a shared event)
-  4. the verify report
+  3. the agent events     - `specify extension disable/enable guardians` when a bundle install left them unwired
+                            (Spec Kit rewrites .specify/extensions.yml then, so this comes before step 4)
+  4. hook priorities in .specify/extensions.yml (auditGuard first and last on a shared event)
+  5. the verify report
 """
 
 from __future__ import annotations
@@ -12,8 +15,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from . import yamlio
-from .common import EXIT_ERROR, EXIT_FINDINGS, EXIT_OK, NAMES, GuardiansError, read_text, rel, version_satisfies, write_text
+from . import speckit, yamlio
+from .common import EXIT_ERROR, EXIT_FINDINGS, EXIT_OK, NAMES, GuardiansError, read_raw, rel, run, version_satisfies, write_text
 from .config import Config
 from .edits import append_to_list, edit_hook_entries, set_top_level_scalar
 from .siblings import ARCHIGUARD_READONLY, Project
@@ -31,6 +34,11 @@ class Outcome:
     def data(self) -> Dict[str, Any]:
         return {"changes": self.changes, "siblings": self.siblings,
                 "verify": self.report.data() if self.report else None, "exit_code": self.exit_code}
+
+
+def _parses(text: str, path: Path) -> None:
+    """Raise GuardiansError when an edited text no longer parses (the line endings do not matter to the readers)."""
+    yamlio.loads(text.replace("\r\n", "\n"), str(path))
 
 
 def _write(project: Project, path: Path, text: str, what: str, outcome: Outcome, dry_run: bool) -> None:
@@ -58,9 +66,9 @@ def wire_scopeguard_embedded(project: Project, outcome: Outcome, dry_run: bool) 
         return
     if sg.get("integration") == "embedded":
         return
-    text, old, changed = set_top_level_scalar(read_text(sg.config_path), "integration", "embedded")
+    text, old, changed = set_top_level_scalar(read_raw(sg.config_path), "integration", "embedded")
     if changed:
-        yamlio.loads(text, str(sg.config_path))  # refuse to leave a file that no longer parses
+        _parses(text, sg.config_path)  # refuse to leave a file that no longer parses
         _write(project, sg.config_path, text, f"integration: {old or '(absent)'} -> embedded (archiGuard runs the scope gate)",
                outcome, dry_run)
 
@@ -77,13 +85,38 @@ def wire_edit_guard(project: Project, outcome: Outcome, dry_run: bool) -> None:
     missing = [p for p in au.audit_readonly() if p not in current]
     if not missing:
         return
-    text, added = append_to_list(read_text(ag.config_path), "edit_guard", "always_readonly", missing)
+    text, added = append_to_list(read_raw(ag.config_path), "edit_guard", "always_readonly", missing)
     if not added:
         outcome.lines.append(f"  NOTE: could not edit edit_guard.always_readonly in {rel(ag.config_path, project.root)} "
                              f"(unexpected shape); add {', '.join(missing)} by hand")
         return
-    yamlio.loads(text, str(ag.config_path))
+    _parses(text, ag.config_path)
     _write(project, ag.config_path, text, f"edit_guard.always_readonly += {', '.join(added)}", outcome, dry_run)
+
+
+def keep_speckit_catalogs(project: Project, outcome: Outcome, dry_run: bool) -> None:
+    """A project catalog file replaces Spec Kit's catalogs. One that lists only the family's (what a bare
+    `specify extension catalog add <family catalog>` creates) hides every other extension from search, info and
+    update: add Spec Kit's default and community catalogs back, as `specify ... catalog add` would write them."""
+    for kind in speckit.CATALOGS:
+        stack = speckit.CatalogStack(project.root, kind)
+        if not stack.repairable():
+            continue
+        add = stack.builtin_to_add()
+        text = speckit.append_catalogs(read_raw(stack.path), add)
+        if text is not None:
+            data = yamlio.loads(text.replace("\r\n", "\n"), str(stack.path))
+            items = data.get("catalogs") if isinstance(data, dict) else None
+            urls = [str(e.get("url", "")).strip() for e in items or [] if isinstance(e, dict) and str(e.get("url", "")).strip()]
+            if urls != stack.urls + [url for _name, url, _prio, _allowed in add]:
+                text = None
+        if text is None:
+            outcome.lines.append(f"  NOTE: could not edit {stack.label} (unexpected shape); add Spec Kit's catalogs by hand: "
+                                 f"{stack.add_commands()}")
+            continue
+        names = ", ".join(f"{name} (priority {prio})" for name, _url, prio, _allowed in add)
+        _write(project, stack.path, text, f"catalogs += {names} - Spec Kit's own {kind} catalogs, which this file replaced",
+               outcome, dry_run)
 
 
 # ----- 2. the siblings' configures ------------------------------------------------------------------------
@@ -106,7 +139,52 @@ def run_siblings(project: Project, cfg: Config, outcome: Outcome, dry_run: bool,
             outcome.lines += ["    " + line for line in text.splitlines()[1:]]
 
 
-# ----- 3. hook order -------------------------------------------------------------------------------------
+# ----- 3. the agent events -------------------------------------------------------------------------------
+
+def wire_agent_events(project: Project, outcome: Outcome, dry_run: bool) -> None:
+    """`specify bundle install` does not wire the extensions' agent events (`extension add` and `enable` do), so
+    archiGuard's edit guard and auditGuard's guard would never run. Spec Kit wires them on `enable`; Guardians has no
+    hooks or events of its own, so disabling and enabling it changes nothing else."""
+    declared = project.declared_events()
+    missing = [i for i in speckit.event_wiring(project.root, declared) if i.state == "missing"] if declared else []
+    if not missing:
+        return
+    what = "; ".join(f"{', '.join(NAMES[e] for e in i.missing)} for {i.key}" for i in missing)
+    if dry_run:
+        outcome.changes.append(f"agent events of {what}: {speckit.WIRE_EVENTS} (Spec Kit wires them)")
+        return
+    command = speckit.specify_command()
+    blocker = ""
+    if not project.sibling("guardians").installed:
+        blocker = "Guardians is not installed in this project"
+    elif not project.extension_enabled("guardians"):
+        blocker = "Guardians is disabled in Spec Kit"
+    elif speckit.init_ai(project.root) == "generic":
+        blocker = "the generic integration"
+    elif command is None:
+        blocker = "specify is not on PATH"
+    if blocker:
+        outcome.lines.append(f"  NOTE: the agent events of {what} are not wired ({blocker}): run {speckit.WIRE_EVENTS}")
+        return
+    for action in ("disable", "enable"):
+        code, out, err = run(command + ["extension", action, "guardians"], project.root)
+        if code != 0:
+            tail = ((err or out).strip().splitlines() or [""])[-1][:200]
+            if action == "disable":
+                outcome.lines.append(f"  NOTE: specify extension disable guardians exited {code} ({tail}); the agent events "
+                                     f"of {what} are not wired: run {speckit.WIRE_EVENTS}")
+                return
+            raise GuardiansError(f"specify extension enable guardians exited {code} ({tail}): Guardians is left disabled "
+                                 "in Spec Kit - run specify extension enable guardians")
+    outcome.changes.append(f"agent events of {what}: wired by Spec Kit ({speckit.WIRE_EVENTS})")
+    still = [i for i in speckit.event_wiring(project.root, project.declared_events()) if i.state == "missing"]
+    if still:
+        outcome.lines.append("  NOTE: Spec Kit did not wire the agent events of "
+                             + "; ".join(f"{', '.join(NAMES[e] for e in i.missing)} for {i.key}" for i in still)
+                             + " (see agent_events_wired below)")
+
+
+# ----- 4. hook order -------------------------------------------------------------------------------------
 
 def order_hooks(project: Project, cfg: Config, outcome: Outcome, dry_run: bool) -> None:
     path = project.registry_path
@@ -124,10 +202,10 @@ def order_hooks(project: Project, cfg: Config, outcome: Outcome, dry_run: bool) 
         want = cfg.priority(ext, event, now)
         return None if want is None else str(want)
 
-    text, found = edit_hook_entries(read_text(path), "priority", decide)
+    text, found = edit_hook_entries(read_raw(path), "priority", decide)
     if not found:
         return
-    yamlio.loads(text, str(path))
+    _parses(text, path)
     groups: Dict[Tuple[str, str, str], int] = {}
     for f in found:
         kind = "before_*" if str(f["event"]).startswith("before_") else "after_*" if str(f["event"]).startswith("after_") else str(f["event"])
@@ -147,12 +225,15 @@ def run_configure(project: Project, cfg: Config, dry_run: bool, siblings: bool, 
     try:
         wire_scopeguard_embedded(project, outcome, dry_run)
         wire_edit_guard(project, outcome, dry_run)
+        keep_speckit_catalogs(project, outcome, dry_run)
         project.reset()
         if siblings:
             outcome.lines.append("  Siblings:")
             run_siblings(project, cfg, outcome, dry_run, verbose)
             outcome.lines.append("")
             project.reset()
+        wire_agent_events(project, outcome, dry_run)
+        project.reset()
         order_hooks(project, cfg, outcome, dry_run)
         project.reset()
     except GuardiansError as exc:

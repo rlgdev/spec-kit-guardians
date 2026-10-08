@@ -30,7 +30,7 @@ def test_aligned_project_passes_every_check(aligned: FakeProject):
     assert tools["auditguard"]["hooks_on"] == 20 and tools["auditguard"]["mode"] == "record"
     assert tools["guardians"]["version"] == VERSIONS["guardians"]
     text = report.text()
-    assert "RESULT: OK | 12 ok, 0 warnings, 0 failures" in text
+    assert f"RESULT: OK | {len(CHECKS)} ok, 0 warnings, 0 failures" in text
     assert f"scopeGuard : {VERSIONS['scopeguard']} | integration embedded | mode enforce | hooks 0/5" in text
 
 
@@ -43,9 +43,14 @@ def test_fresh_project_has_the_expected_failures(fresh: FakeProject):
     assert statuses["hooks_match_integration"] == "warn"  # inline / embedded tools with hooks on
     assert statuses["gitattributes"] == "warn"
     assert statuses["installed"] == "ok" and statuses["git_base_agrees"] == "ok"
+    assert statuses["catalogs_keep_defaults"] == "warn"   # the Guardians catalogs alone (the old install docs)
+    assert statuses["agent_events_wired"] == "warn"       # a bundle install does not wire them
     assert report.status == "fail"
     fixes = {c.id: c.fix for c in report.checks}
     assert "guardians configure" in fixes["scopeguard_embedded"] and "guardians configure" in fixes["edit_guard_covers_audit"]
+    assert fixes["catalogs_keep_defaults"].startswith("guardians configure (adds default, community back to")
+    assert fixes["agent_events_wired"] == ("guardians configure (runs specify extension disable guardians && "
+                                           "specify extension enable guardians)")
 
 
 # ----- one change per check -------------------------------------------------------------------------------
@@ -56,6 +61,110 @@ def test_installed(aligned: FakeProject):
     check = next(c for c in report.checks if c.id == "installed")
     assert check.status == "fail" and "auditguard" in check.message and check.fix == "specify bundle install guardians"
     assert report.tools["auditguard"] == {"installed": False}
+
+
+def check_of(project: FakeProject, check_id: str):
+    return next(c for c in verify(project).checks if c.id == check_id)
+
+
+def test_catalogs_keep_defaults(aligned: FakeProject, fresh: FakeProject):
+    check = check_of(aligned, "catalogs_keep_defaults")
+    assert check.status == "ok" and check.message == ("extensions: .specify/extension-catalogs.yml keeps default, community; "
+                                                      "presets: .specify/preset-catalogs.yml keeps default, community")
+    check = check_of(fresh, "catalogs_keep_defaults")
+    assert check.status == "warn"
+    assert check.message.startswith(".specify/extension-catalogs.yml replaces Spec Kit's extension catalogs and lacks "
+                                    "default, community: other extensions are missing from search, info and update; "
+                                    ".specify/preset-catalogs.yml replaces")
+    # no project file: Spec Kit's own catalogs (or the user's) are in force
+    for kind in ("extension", "preset"):
+        aligned.path(f".specify/{kind}-catalogs.yml").unlink()
+    check = check_of(aligned, "catalogs_keep_defaults")
+    assert check.status == "ok" and "extensions: Spec Kit's own catalogs (no .specify/extension-catalogs.yml)" in check.message
+
+
+def test_catalogs_a_corporate_stack_is_named_not_repaired(fresh: FakeProject):
+    fresh.write(".specify/extension-catalogs.yml", "catalogs:\n- name: corp\n  url: https://catalog.example.com/x.json\n"
+                "  priority: 1\n  install_allowed: true\n")
+    check = check_of(fresh, "catalogs_keep_defaults")
+    assert check.status == "warn" and "lacks default, community" in check.message
+    assert check.fix.startswith("specify extension catalog add https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json "
+                                "--name default --priority 1 --install-allowed / specify extension catalog add ")
+    assert "--name community --priority 20 --no-install-allowed - or switch this check off" in check.fix
+
+
+def test_catalogs_the_user_level_file_is_what_is_replaced(fresh: FakeProject, _speckit_environment: Path):
+    user = _speckit_environment / ".specify" / "extension-catalogs.yml"
+    user.parent.mkdir(parents=True)
+    user.write_text("catalogs:\n- name: corp\n  url: https://catalog.example.com/x.json\n", encoding="utf-8")
+    check = check_of(fresh, "catalogs_keep_defaults")
+    assert "extension-catalogs.yml replaces Spec Kit's extension catalogs and lacks corp:" in check.message
+    assert "copy the entries of ~/.specify/extension-catalogs.yml into .specify/extension-catalogs.yml" in check.fix
+    fresh.write(".specify/extension-catalogs.yml", user.read_text(encoding="utf-8") + fresh.path(
+        ".specify/extension-catalogs.yml").read_text(encoding="utf-8").replace("catalogs:\n", ""))
+    fresh.path(".specify/preset-catalogs.yml").unlink()
+    check = check_of(fresh, "catalogs_keep_defaults")
+    assert check.status == "ok" and check.message.startswith("extensions: .specify/extension-catalogs.yml keeps corp;")
+
+
+def test_catalogs_empty_files_and_the_environment(aligned: FakeProject, monkeypatch):
+    aligned.write(".specify/extension-catalogs.yml", "catalogs: []\n")
+    aligned.write(".specify/preset-catalogs.yml", "catalogs: []\n")    # presets: Spec Kit falls back to its own
+    check = check_of(aligned, "catalogs_keep_defaults")
+    assert check.status == "warn" and check.message == (".specify/extension-catalogs.yml lists no catalog: every Spec Kit "
+                                                        "command that reads the extension catalogs fails")
+    assert check.fix == "delete .specify/extension-catalogs.yml (Spec Kit then uses its own catalogs)"
+    monkeypatch.setenv("SPECKIT_CATALOG_URL", "https://catalog.example.com/only.json")
+    check = check_of(aligned, "catalogs_keep_defaults")
+    assert check.status == "ok" and check.message == ("extensions: SPECKIT_CATALOG_URL is set (Spec Kit uses that one "
+                                                      "catalog); presets: Spec Kit's own catalogs (no .specify/preset-catalogs.yml)")
+    aligned.write(".specify/preset-catalogs.yml", "catalogs: [unclosed\n")
+    check = check_of(aligned, "catalogs_keep_defaults")
+    assert check.status == "warn" and check.message.startswith("cannot read .specify/preset-catalogs.yml:")
+
+
+def test_agent_events_wired(aligned: FakeProject, fresh: FakeProject):
+    check = check_of(aligned, "agent_events_wired")
+    assert check.status == "ok" and check.message == "claude: archiGuard, auditGuard in .claude/settings.json"
+    check = check_of(fresh, "agent_events_wired")
+    assert check.status == "warn" and check.message == (
+        "the agent events of archiGuard, auditGuard are not wired for claude (.claude/settings.json): archiGuard's edit "
+        "guard, auditGuard's guard and session records never run")
+    # one of the two wired: the other one is named
+    fresh.write(".claude/settings.json", '{"hooks": {"PreToolUse": [{"hooks": [{"command": "x speckit.auditguard.guard"}]}]}}')
+    assert check_of(fresh, "agent_events_wired").message.startswith("the agent events of archiGuard are not wired for claude")
+
+
+def test_agent_events_switched_off_overridden_or_not_supported(fresh: FakeProject):
+    import json
+    fresh.write(".specify/integration.json", json.dumps({"integration": "claude", "installed_integrations": ["claude"],
+                                                         "integration_settings": {"claude": {"parsed_options": {"events": "false"}}}}))
+    check = check_of(fresh, "agent_events_wired")
+    assert check.status == "na" and check.message == "claude: agent events switched off (--events false)"
+    fresh.write(".specify/integration.json", json.dumps({"integration": "claude", "installed_integrations": ["claude"],
+                                                         "integration_settings": {"claude": {"raw_options": "--events false"}}}))
+    assert check_of(fresh, "agent_events_wired").status == "na"
+    fresh.write(".specify/integration.json", json.dumps({"installed_integrations": ["claude"]}))
+    fresh.write(".specify/integration-events.yml", "integrations:\n  claude:\n    events: {}\n")
+    check = check_of(fresh, "agent_events_wired")
+    assert check.status == "na" and check.message == "claude: agent events set by .specify/integration-events.yml"
+    fresh.write(".specify/integration.json", json.dumps({"installed_integrations": ["windsurf", "copilot"]}))
+    check = check_of(fresh, "agent_events_wired")
+    assert check.status == "warn" and "not wired for copilot (.github/hooks/speckit.json)" in check.message
+    assert "windsurf" not in check.message
+    fresh.write(".specify/integration.json", json.dumps({"installed_integrations": ["windsurf"]}))
+    check = check_of(fresh, "agent_events_wired")
+    assert check.status == "na" and check.message == "windsurf: Spec Kit wires no agent events for it"
+    fresh.path(".specify/integration.json").unlink()
+    assert check_of(fresh, "agent_events_wired").message == "no integration recorded in .specify/integration.json"
+
+
+def test_agent_events_of_a_disabled_extension_are_not_expected(fresh: FakeProject):
+    import json
+    fresh.write(".specify/extensions/.registry", json.dumps({"extensions": {"archiguard": {"enabled": False},
+                                                                           "auditguard": {"enabled": False}}}))
+    check = check_of(fresh, "agent_events_wired")
+    assert check.status == "na" and check.message == "no installed Guardian declares agent events"
 
 
 def test_preset_missing_while_inline(aligned: FakeProject):
@@ -210,7 +319,7 @@ def test_cli_verify_text_and_json(aligned: FakeProject, chdir):
     code, out = guardians_cli("verify", "--json")
     import json
     data = json.loads(out)
-    assert code == 0 and data["status"] == "ok" and len(data["checks"]) == 12 and data["tools"]["guardians"]["version"] == VERSIONS["guardians"]
+    assert code == 0 and data["status"] == "ok" and len(data["checks"]) == len(CHECKS) and data["tools"]["guardians"]["version"] == VERSIONS["guardians"]
 
 
 def test_cli_exit_codes(fresh: FakeProject, chdir, tmp_path: Path):

@@ -10,9 +10,9 @@ from . import yamlio
 from .common import SIBLINGS, GuardiansError
 
 CHECKS = (
-    "installed", "preset_matches_integration", "versions_in_range", "scopeguard_embedded",
+    "installed", "catalogs_keep_defaults", "preset_matches_integration", "versions_in_range", "scopeguard_embedded",
     "auditguard_integration", "hook_order", "hooks_match_integration", "git_base_agrees",
-    "edit_guard_covers_audit", "modes_agree", "gitattributes", "codeowners",
+    "edit_guard_covers_audit", "agent_events_wired", "modes_agree", "gitattributes", "codeowners",
 )
 SEVERITIES = ("fail", "warn", "off")
 
@@ -22,6 +22,7 @@ DEFAULTS: Dict[str, Any] = {
     "hook_priority": {"auditguard": {"before": 1, "after": 90}, "default": 10},
     "checks": {
         "installed": "fail",
+        "catalogs_keep_defaults": "warn",
         "preset_matches_integration": "fail",
         "versions_in_range": "fail",
         "scopeguard_embedded": "fail",
@@ -30,6 +31,7 @@ DEFAULTS: Dict[str, Any] = {
         "hooks_match_integration": "warn",
         "git_base_agrees": "fail",
         "edit_guard_covers_audit": "fail",
+        "agent_events_wired": "warn",
         "modes_agree": "warn",
         "gitattributes": "warn",
         "codeowners": "warn",

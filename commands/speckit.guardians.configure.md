@@ -15,7 +15,9 @@ $ARGUMENTS
 ## Goal
 
 One configure for the family: set scopeGuard to `integration: embedded` (archiGuard runs the scope gate), add
-the audit trail to archiGuard's edit guard, run the three tools' own `configure` commands in order, give
+the audit trail to archiGuard's edit guard, add Spec Kit's catalogs back to a catalog file that lists only the
+Guardians', run the three tools' own `configure` commands in order, have Spec Kit wire the agent events a bundle
+install leaves out (`specify extension disable guardians && specify extension enable guardians`), give
 auditGuard's hooks the first and last place on the events it shares with a gate, and print one table of what is
 in force with the alignment checks.
 

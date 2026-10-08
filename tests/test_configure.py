@@ -110,7 +110,7 @@ def test_json_output(fresh: FakeProject):
     data = json.loads(out)
     assert code == 0 and data["exit_code"] == 0
     assert [s["id"] for s in data["siblings"]] == ["scopeguard", "archiguard", "auditguard"]
-    assert len(data["changes"]) == 3 and data["verify"]["status"] == "warn"
+    assert len(data["changes"]) == 6 and data["verify"]["status"] == "warn"
 
 
 def test_custom_order_and_priorities(fresh: FakeProject):
@@ -152,3 +152,130 @@ def test_missing_sibling_configs_say_how_to_create_them(fresh: FakeProject):
         assert f"NOTE: {d}/{ext}-config.yml not found: copy {d}/config-template.yml to {d}/{ext}-config.yml, then run guardians configure again" in out
         assert not fresh.config_path(ext).exists()
     assert "creates it" not in out
+
+
+# ----- Spec Kit's catalogs ----------------------------------------------------------------------------------
+
+def test_catalogs_of_spec_kit_are_added_back(fresh: FakeProject):
+    before = fresh.path(".specify/extension-catalogs.yml").read_text(encoding="utf-8")
+    code, out = run(fresh)
+    assert code == 0, out
+    assert (".specify/extension-catalogs.yml: catalogs += default (priority 1), community (priority 20) - Spec Kit's own "
+            "extension catalogs, which this file replaced") in out
+    assert ".specify/preset-catalogs.yml: catalogs += default (priority 1), community (priority 20)" in out
+    after = fresh.path(".specify/extension-catalogs.yml").read_text(encoding="utf-8")
+    assert after.startswith(before)                                   # an append: the Guardians entry is untouched
+    entries = yaml.safe_load(after)["catalogs"]
+    # exactly what `specify extension catalog add <url> --name default --priority 1 --install-allowed` writes, so a
+    # later run of that command is a no-op
+    assert entries[1:] == [
+        {"name": "default", "url": "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json",
+         "priority": 1, "install_allowed": True, "description": ""},
+        {"name": "community", "url": "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json",
+         "priority": 20, "install_allowed": False, "description": ""}]
+    presets = yaml.safe_load(fresh.path(".specify/preset-catalogs.yml").read_text(encoding="utf-8"))["catalogs"]
+    assert [e["url"].rsplit("/", 2)[-2:] for e in presets[1:]] == [["presets", "catalog.json"], ["presets", "catalog.community.json"]]
+    assert "[OK]   catalogs_keep_defaults" in out
+
+
+def test_catalogs_that_are_not_only_the_familys_are_left_alone(fresh: FakeProject, _speckit_environment: Path):
+    corporate = "catalogs:\n- name: corp\n  url: https://catalog.example.com/x.json\n  priority: 1\n  install_allowed: true\n"
+    fresh.write(".specify/extension-catalogs.yml", corporate)
+    user = _speckit_environment / ".specify" / "preset-catalogs.yml"   # the user's catalogs: not copied into the project
+    user.parent.mkdir(parents=True)
+    user.write_text("catalogs:\n- name: mine\n  url: https://catalog.example.com/p.json\n", encoding="utf-8")
+    preset_before = fresh.path(".specify/preset-catalogs.yml").read_text(encoding="utf-8")
+    code, out = run(fresh)
+    assert fresh.path(".specify/extension-catalogs.yml").read_text(encoding="utf-8") == corporate
+    assert fresh.path(".specify/preset-catalogs.yml").read_text(encoding="utf-8") == preset_before
+    assert "catalogs +=" not in out and "[WARN] catalogs_keep_defaults" in out and code == 0
+
+
+def test_catalog_repair_keeps_crlf_and_refuses_an_unexpected_shape(fresh: FakeProject):
+    path = fresh.path(".specify/extension-catalogs.yml")
+    path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+    flow = "catalogs: [{name: guardians, url: 'https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/presets.json'}]\n"
+    fresh.write(".specify/preset-catalogs.yml", flow)
+    code, out = run(fresh)
+    data = path.read_bytes()
+    assert b"name: default\r\n" in data and b"\n" not in data.replace(b"\r\n", b"")
+    assert fresh.path(".specify/preset-catalogs.yml").read_text(encoding="utf-8") == flow
+    assert ("NOTE: could not edit .specify/preset-catalogs.yml (unexpected shape); add Spec Kit's catalogs by hand: "
+            "specify preset catalog add https://raw.githubusercontent.com/github/spec-kit/main/presets/catalog.json "
+            "--name default --priority 1 --install-allowed") in out
+
+
+# ----- the agent events ------------------------------------------------------------------------------------
+
+WIRE = "specify extension disable guardians && specify extension enable guardians"
+
+
+def test_agent_events_are_wired_through_spec_kit(fresh: FakeProject):
+    code, out = run(fresh)
+    assert code == 0, out
+    assert fresh.specify_calls() == ["extension disable guardians", "extension enable guardians"]
+    assert f"agent events of archiGuard, auditGuard for claude: wired by Spec Kit ({WIRE})" in out
+    settings = fresh.path(".claude/settings.json").read_text(encoding="utf-8")
+    assert "speckit.archiguard.editguard" in settings and "speckit.auditguard.guard" in settings
+    assert "[OK]   agent_events_wired" in out
+    run(fresh)
+    assert len(fresh.specify_calls()) == 2                            # wired: the second run calls nothing
+
+
+def test_agent_events_dry_run_calls_nothing(fresh: FakeProject):
+    code, out = run(fresh, "--dry-run")
+    assert fresh.specify_calls() == []
+    assert f"agent events of archiGuard, auditGuard for claude: {WIRE} (Spec Kit wires them)" in out
+
+
+def test_agent_events_without_specify_or_when_guardians_is_disabled(fresh: FakeProject, monkeypatch):
+    from guardians_core import speckit
+    monkeypatch.setattr(speckit, "specify_command", lambda: None)
+    code, out = run(fresh)
+    assert code == 0 and (f"NOTE: the agent events of archiGuard, auditGuard for claude are not wired (specify is not on "
+                          f"PATH): run {WIRE}") in out
+    assert "[WARN] agent_events_wired" in out
+
+
+def test_agent_events_are_not_toggled_for_a_disabled_guardians_or_the_generic_integration(fresh: FakeProject):
+    fresh.write(".specify/extensions/.registry", json.dumps({"extensions": {"guardians": {"enabled": False}}}))
+    code, out = run(fresh)
+    assert fresh.specify_calls() == [] and "are not wired (Guardians is disabled in Spec Kit): run" in out
+    fresh.path(".specify/extensions/.registry").unlink()
+    fresh.write(".specify/init-options.json", json.dumps({"ai": "generic"}))
+    code, out = run(fresh)
+    assert fresh.specify_calls() == [] and "are not wired (the generic integration): run" in out
+
+
+def test_agent_events_when_spec_kit_fails(fresh: FakeProject):
+    fresh.write(".specify/SPECIFY_FAIL", "disable")
+    code, out = run(fresh)
+    assert code == 0 and fresh.specify_calls() == ["extension disable guardians"]
+    assert "NOTE: specify extension disable guardians exited 1 (Error: disable failed on purpose); the agent events" in out
+    fresh.write(".specify/SPECIFY_FAIL", "enable")
+    code, out = run(fresh)
+    assert code == 2 and ("ERROR: specify extension enable guardians exited 1 (Error: enable failed on purpose): Guardians "
+                          "is left disabled in Spec Kit - run specify extension enable guardians") in out
+    fresh.path(".specify/SPECIFY_FAIL").unlink()
+    fresh.write(".specify/SPECIFY_NOWIRE", "")                       # a Spec Kit whose enable wires nothing
+    fresh.write(".specify/extensions/.registry", json.dumps({"extensions": {}}))
+    fresh.write(".claude/settings.json", "{}\n")
+    code, out = run(fresh)
+    assert "NOTE: Spec Kit did not wire the agent events of archiGuard, auditGuard for claude" in out
+
+
+# ----- line endings ----------------------------------------------------------------------------------------
+
+def test_crlf_files_keep_their_line_endings(fresh: FakeProject):
+    """Spec Kit writes .specify/extensions.yml with CRLF on Windows; the line edits keep it, so git shows their lines."""
+    lf = make_project(fresh.root.parent / "lf", aligned=False)
+    for project in (fresh, lf):
+        if project is fresh:
+            for rel in (".specify/extensions.yml", ".specify/extensions/scopeguard/scopeguard-config.yml",
+                        ".specify/extensions/archiguard/archiguard-config.yml"):
+                path = project.path(rel)
+                path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+        assert run(project)[0] == 0
+    for rel in (".specify/extensions.yml", ".specify/extensions/scopeguard/scopeguard-config.yml",
+                ".specify/extensions/archiguard/archiguard-config.yml"):
+        assert fresh.path(rel).read_bytes() == lf.path(rel).read_bytes().replace(b"\n", b"\r\n"), rel

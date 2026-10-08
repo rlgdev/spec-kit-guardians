@@ -1,10 +1,11 @@
 schema_version: "1.0"
 
 # Guardians - one install for scopeGuard, archiGuard and auditGuard at versions tested together.
-# Pins are exact (Spec Kit resolves them through an install-allowed catalog whose entry carries that version):
-#   specify extension catalog add https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/extensions.json --name guardians --install-allowed
-#   specify preset catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/presets.json    --name guardians --install-allowed
-#   specify bundle catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/bundles.json
+# Pins are exact (Spec Kit resolves them through an install-allowed catalog whose entry carries that version).
+# After Spec Kit's own default and community catalogs (a project catalog file replaces them; README.md, Install):
+#   specify extension catalog add https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/extensions.json --name guardians --priority 10 --install-allowed
+#   specify preset catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/presets.json    --name guardians --priority 10 --install-allowed
+#   specify bundle catalog add    https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/bundles.json    --id guardians
 #   specify bundle install guardians
 # Then: bash .specify/extensions/guardians/scripts/bash/guardians.sh configure   (or /speckit.guardians.configure)
 

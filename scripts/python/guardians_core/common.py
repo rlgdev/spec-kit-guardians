@@ -38,6 +38,13 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def read_raw(path: Path) -> str:
+    """The text with its own line endings (no newline translation): what the line edits read, so a file that uses
+    CRLF (Spec Kit writes .specify/extensions.yml with the platform's ending) is written back with CRLF."""
+    with open(path, encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
 def write_text(path: Path, text: str) -> None:
     """Write UTF-8 and keep the text's own line endings (newline='' disables translation)."""
     path.parent.mkdir(parents=True, exist_ok=True)

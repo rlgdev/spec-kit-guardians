@@ -1,7 +1,8 @@
 # Guardians bundle for Spec Kit — Specification v1.0 (ready to implement)
 
 > **Status:** implemented in Guardians 0.1.0 (`rlgdev/spec-kit-guardians`), tested against Spec Kit 1.0.1 and 1.0.13
-> with scopeGuard 0.4.0, archiGuard 0.1.0 and auditGuard 0.1.0 (main); 0.1.2 raises the Spec Kit floor to 1.0.3 (A10).
+> with scopeGuard 0.4.0, archiGuard 0.1.0 and auditGuard 0.1.0 (main); 0.1.2 raises the Spec Kit floor to 1.0.3 (A10);
+> the next release keeps the project's other extensions working (A12-A16).
 > Where the body below differs, the amendment wins.
 
 ## Amendments in the 0.1.0 implementation
@@ -18,6 +19,11 @@
 | A8 | §3.4, US3 | A check line is `<mark> <id> <message>` with the mark padded to 6 columns (`[OK]  `, `[WARN]`, `[FAIL]`, `[--]  `) and the id padded to 27, no ` : ` separator; the `fix:` line is indented under the message column. US3's line is `[FAIL] git_base_agrees             archiguard git.base=main, auditguard golden.git.base=develop` and the two file paths are on its `fix:` line. `--json` prints `{"version", "root", "status", "tools", "checks", "notes"}`: top-level `status` is `ok` \| `warn` \| `fail` (a check's additionally `na` or `off`); every `tools` entry carries `installed` (an absent sibling is `{"installed": false}`), an installed one adds `version` and, except `guardians`, `integration`, `effective_integration`, `mode`, `hooks_on`, `hooks`, plus `status_error` when its `configure --dry-run --json` could not be read and, for `archiguard`, `scope_in_pipeline` and `preset`; `notes` is a list of strings (empty in this version). | Aligned columns: the message starts where the longest id ends; the JSON carries what the text report shows. |
 | A10 | Host, FR-001, FR-704, §5.1, §5.2 | The bundle and the `guardians` extension require Spec Kit `>=1.0.3`; the CI e2e runs against `specify-cli` latest and `1.0.3`, and a `floor` job checks that Spec Kit 1.0.2 refuses the bundle. The siblings' own floors stay `>=1.0.1`. | Spec Kit 1.0.1 and 1.0.2 do not create an extension's config file from its template on `specify bundle install` (1.0.3 and later do, as `extension add` always did), so `configure` found nothing to cross-wire and `verify` failed. Their bundle resolver refuses a bundle whose floor they do not meet before installing anything. |
 | A11 | FR-202, FR-203, FR-304, FR-309 | A missing sibling config file is not created by the sibling's `configure` (none of the three does). `configure` notes `<file> not found: copy <template> to <file>, then run guardians configure again` (the template the sibling's `provides.config` declares) and writes nothing; the `fix:` line of `scopeguard_embedded` and `edit_guard_covers_audit` starts with the same copy. | Creating a sibling's config would be a fourth thing Guardians writes (D2); the person makes the copy. |
+| A12 | FR-002, FR-004, US1 | The documented install adds Spec Kit's own catalogs before the family's: `specify extension catalog add https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json --name default --priority 1 --install-allowed`, the same for `catalog.community.json` with `--name community --priority 20 --no-install-allowed`, then the Guardians catalog with `--priority 10 --install-allowed`; the same three for `specify preset catalog add` (`presets/catalog.json`, `presets/catalog.community.json`, `catalog/presets.json`); `specify bundle catalog add ... --id guardians`. The notes say that a project catalog file replaces Spec Kit's catalogs and a user-level `~/.specify/` file (whose entries are added instead), and that `SPECKIT_CATALOG_URL` replaces every file. The uninstall removes the three catalog entries and, installed one at a time, the preset before archiGuard. | Spec Kit reads `.specify/extension-catalogs.yml` (`preset-catalogs.yml`) instead of its built-in stack, never in addition. The install of FR-004 created that file with the Guardians catalog alone, so every other extension of the project disappeared from `specify extension search`, `info` and `update` ("not found in catalog"), and stayed hidden after `bundle remove`. `community` comes after the Guardians catalog: it is discovery-only, and the trusted catalog wins a shared id. |
+| A13 | §3.3, FR-101, NFR-002, D2 | `configure` makes two repairs of Spec Kit's own state, reported under `Changed:` like its edits. **Catalogs** (with the cross-wiring): when `.specify/extension-catalogs.yml` or `preset-catalogs.yml` lists only family catalogs (`https://raw.githubusercontent.com/rlgdev/spec-kit-<id>/`), `SPECKIT_CATALOG_URL` / `SPECKIT_PRESET_CATALOG_URL` is unset and no user-level file exists, it appends Spec Kit's `default` (priority 1, install allowed) and `community` (20, discovery only) in the shape `specify ... catalog add` writes them (a later `catalog add` of the same catalog is a no-op); another file shape gets a note with the commands. **Agent events** (after the siblings' configures, before the hook order): when an installed integration that Spec Kit wires events for lacks the event commands of an installed, enabled Guardian in its settings file, it runs `specify extension disable guardians` then `specify extension enable guardians`; with `--dry-run` it lists that under `Would change:`; without `specify` on PATH, on the `generic` integration or with Guardians disabled it prints the command in a note; a failed `enable` stops with exit `2`. | `specify bundle install` does not wire the extensions' `events:` (`extension add` and `enable` do), so archiGuard's edit guard and auditGuard's guard and session records never ran. Spec Kit rewires every enabled extension on `enable` and Guardians has no hooks or events, so the toggle changes nothing else; Spec Kit rewrites `.specify/extensions.yml` then, which is why the hook order follows it. |
+| A14 | §3.4, §5.3, §5.5, SC-001, SC-002 | Two checks, fourteen in all. **`catalogs_keep_defaults`** (warn, after `installed`): per kind, `[OK]` without a project catalog file or with `SPECKIT_CATALOG_URL` / `SPECKIT_PRESET_CATALOG_URL` set; a problem when the project file lacks a catalog it replaces (the user-level file's entries, else Spec Kit's `default` and `community`; compared by URL), when the extension file lists none (Spec Kit then fails every catalog command) or cannot be read; the fix is `guardians configure` where A13 repairs, else the `catalog add` commands or the copy of the user-level entries. **`agent_events_wired`** (warn, after `edit_guard_covers_audit`): for each integration in `.specify/integration.json`, the settings file of Spec Kit 1.1.1's event-capable integrations (claude `.claude/settings.json`, codex `.codex/config.toml`, copilot `.github/hooks/speckit.json`, cursor-agent `.cursor/hooks.json`, devin `.devin/hooks.v1.json`, gemini `.gemini/settings.json`, opencode `.opencode/plugin/speckit-events.ts`, qwen `.qwen/settings.json`, tabnine `.tabnine/agent/settings.json`, vibe `.vibe/hooks.toml`) names at least one event command of every installed, enabled Guardian whose manifest declares `events:`; `[--]` where `--events false` is stored, `.specify/integration-events.yml` sets the integration's events, or the integration takes none. | The two ways the install made the project's other extensions and the siblings' own guards silently stop working; both are warnings so that existing CI does not turn red on upgrade. |
+| A15 | NFR-005, FR-204 | Every line edit keeps the line ending of the file it edits (the file is read without newline translation); the siblings' `configure` keep `.specify/extensions.yml`'s too. | Spec Kit writes `.specify/extensions.yml` with the platform's line ending. Rewritten with LF on Windows, `git diff` showed every hook of every other extension removed and added again. |
+| A16 | NFR-007 | The extension stays under 2 000 lines of Python. | A13 and A14 add the module `speckit.py` (Spec Kit's catalog stacks and agent-event wiring). |
 | A9 | FR-313, §5.5 | A tools line is `<Name padded to 10> : <version> \| integration <configured>[ -> <effective>] \| mode <mode> \| hooks <on>/<registered>`; archiGuard's line adds `\| scope gate in pipeline` / `\| scope gate not in pipeline` (when its JSON carries `scope_in_pipeline`) and `\| preset installed` / `\| preset missing`; Guardians' own line is `Guardians  : <version>`; an absent Guardian prints `<Name> : not installed`. `integration`, `effective_integration`, `mode` and `scope_in_pipeline` come from the sibling's `configure --dry-run --json` (a key that JSON does not print, such as archiGuard's `mode`, from its config file); the hook counts come from `.specify/extensions.yml` (entries with `extension: <id>`, enabled unless `enabled: false`); the JSON's `hooks[]` and `readiness` are not read. | Same shape as the configure sibling line (A3); the archiGuard facts the checks use are shown where they come from. |
 
 | | |
@@ -416,6 +422,7 @@ hook_priority:                 # .specify/extensions.yml - lower runs first; Spe
 
 checks:                        # fail | warn | off
   installed: fail
+  catalogs_keep_defaults: warn
   preset_matches_integration: fail
   versions_in_range: fail
   scopeguard_embedded: fail
@@ -424,6 +431,7 @@ checks:                        # fail | warn | off
   hooks_match_integration: warn
   git_base_agrees: fail
   edit_guard_covers_audit: fail
+  agent_events_wired: warn
   modes_agree: warn
   gitattributes: warn
   codeowners: warn
@@ -449,6 +457,8 @@ guardians version
 | `.specify/extensions.yml` | `hooks.<event>[]` entries: `extension`, `command`, `enabled`, `priority` |
 | `.specify/presets/<id>/` | presence |
 | `.gitattributes`, `CODEOWNERS` | lines |
+| `.specify/extension-catalogs.yml`, `.specify/preset-catalogs.yml`, the same in `~/.specify/` | `catalogs[].url`, `name` (A14) |
+| `.specify/integration.json`, `.specify/integration-events.yml`, `.specify/extensions/.registry`, the integrations' settings files | installed integrations, their stored `--events`, event overrides, `enabled`, the event commands (A14) |
 
 ### 5.6 `verify --json`
 
@@ -480,10 +490,11 @@ spec-kit-guardians/
   scripts/python/guardians_core/
     __init__.py   version
     cli.py        argument parsing, exit codes, output
-    common.py     project root, read/write text (LF), version_satisfies, GuardiansError
+    common.py     project root, read/write text (keeping line endings), version_satisfies, GuardiansError
     yamlio.py     PyYAML or a sibling's reader (D3)
     siblings.py   discovery, versions, launchers, `configure --dry-run --json`
     edits.py      the three line edits (integration line, always_readonly list, hook priorities)
+    speckit.py    Spec Kit's catalog stacks and agent-event wiring (A13, A14)
     configure.py  FR-2xx
     verify.py     FR-3xx
   tests/  conftest.py (fake project, stub sibling launchers, a registry in Spec Kit's dump style, CODEOWNERS)  fixtures/ (the siblings' config templates at the pins)  test_config_and_yaml.py  test_edits.py  test_verify.py  test_configure.py  test_build_and_launchers.py
