@@ -5,6 +5,26 @@ All notable changes to Guardians are documented here. The format follows
 [Semantic Versioning](https://semver.org/). A bundle version is a tested combination of the siblings'
 versions; the pins are listed with every release.
 
+## [0.1.3] - 2026-10-09
+
+Pins: scopeGuard 0.4.1 · archiGuard 0.1.1 · **auditGuard 0.2.0** (was 0.1.0) · archiguard-templates 0.1.1.
+
+### Changed
+
+- auditGuard 0.2.0 makes its `light` profile the default: the twenty hooks still record every command, the gate
+  verdicts, waivers and decisions, but no agent event runs any more (no session record, no `stop` handler, no
+  `pre_tool_use` guard), scopeGuard's report is not re-run at every hook and the views are rebuilt on demand. The
+  first field run of the bundle had shown `/speckit.plan` dragging on those events. `profile: full` in
+  `auditguard-config.yml` brings the complete recorder back ([auditGuard: Profiles](https://github.com/rlgdev/spec-kit-auditguard#profiles-light-and-full)).
+- With auditGuard's own guard off by default, the cross-wiring this bundle has always done - `audit/**` and
+  `.specify/extensions/auditguard/**` in archiGuard's `edit_guard.always_readonly` - is the guard on the trail;
+  `edit_guard_covers_audit` keeps checking it (`fail`).
+- `guardians configure` calls `auditguard configure` as before; in the light profile that call also removes
+  auditGuard's switched-off events from the agent's hook config (Claude Code `.claude/settings.json`). A later
+  `specify extension add` or `enable` re-wires them; run `guardians configure` again afterwards.
+- The auditGuard fixture (`tests/fixtures/auditguard-config.yml`) is the 0.2.0 template; `action.yml` and the CI
+  refs pin `rlgdev/spec-kit-auditguard@v0.2.0`; the catalogs and the getting-started guide name the new versions.
+
 ## [0.1.2] - 2026-10-07
 
 Pins unchanged: scopeGuard 0.4.1 · archiGuard 0.1.1 · auditGuard 0.1.0 · archiguard-templates 0.1.1.

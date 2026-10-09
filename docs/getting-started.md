@@ -52,7 +52,7 @@ specify bundle install guardians
 `scopeguard`, `archiguard`, `auditguard` and `guardians`; `specify preset list` shows `archiguard-templates`.
 
 > **Download fails?** The bundle resolves its components through the GitHub release assets of the pinned versions
-> (scopeGuard `v0.4.1`, archiGuard `v0.1.1`, auditGuard `v0.1.0`, Guardians `v0.1.2`). Where GitHub is not
+> (scopeGuard `v0.4.1`, archiGuard `v0.1.1`, auditGuard `v0.2.0`, Guardians `v0.1.3`). Where GitHub is not
 > reachable, use path B's checkout variant (`--dev`); the result is identical.
 
 ### Path B: one extension at a time
@@ -63,8 +63,8 @@ From the release assets:
 specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
 specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
 specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
-specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.2/guardians.zip
+specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.2.0/auditguard.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.3/guardians.zip
 ```
 
 Spec Kit asks you to confirm each `specify extension add --from` install (`Continue with installation? [y/N]`): answer `y`.
@@ -203,8 +203,9 @@ audit/                      @your-org/lead-architects
 .specify/extensions/        @your-org/lead-architects
 ```
 
-Commit it with the project. The tools' own guards (archiGuard's edit guard, auditGuard's `pre_tool_use` guard)
-stop the **agent**; CODEOWNERS and CI stop everyone else.
+Commit it with the project. The tools' own guards stop the **agent**: archiGuard's edit guard, which the bundle
+points at the audit trail too, and - in auditGuard's `full` profile - auditGuard's own `pre_tool_use` guard.
+CODEOWNERS and CI stop everyone else.
 
 ---
 
@@ -269,7 +270,7 @@ jobs:
           fetch-depth: 0            # auditGuard's golden checks and archiGuard's traceability read the history
           submodules: true          # the standards repository at its pinned tag
       - run: git fetch -q origin "refs/notes/*:refs/notes/*" "refs/tags/*:refs/tags/*" || true
-      - uses: rlgdev/spec-kit-guardians@v0.1.2
+      - uses: rlgdev/spec-kit-guardians@v0.1.3
         with:
           features: all             # or specs/001-my-feature
 ```
@@ -280,7 +281,7 @@ to the job summary. Each part can be switched off with `scopeguard: "false"` and
 check on the protected branch.
 
 To compose the job yourself instead, use the three siblings' actions directly (`rlgdev/spec-kit-scopeguard@v0.4.1`,
-`rlgdev/spec-kit-archiguard@v0.1.1`, `rlgdev/spec-kit-auditguard@v0.1.0`) and add one step:
+`rlgdev/spec-kit-archiguard@v0.1.1`, `rlgdev/spec-kit-auditguard@v0.2.0`) and add one step:
 
 ```yaml
       - run: python .specify/extensions/guardians/scripts/python/guardians.py verify
@@ -300,7 +301,7 @@ READMEs have Bitbucket Pipelines examples.
 | `.specify/extensions.yml` | Spec Kit (hook registry); `configure` sets `enabled` and `priority` | yes |
 | `.specify/presets/archiguard-templates/` | the preset install | yes |
 | `.claude/skills/speckit-*/` (or your agent's folder) | Spec Kit renders the wrapped commands | yes |
-| `.claude/settings.json` | Spec Kit wires the agent events (edit guard, audit guard, sessions) | yes |
+| `.claude/settings.json` | Spec Kit wires the agent events (archiGuard's edit guard; auditGuard's guard, sessions and stop in its `full` profile - its default `light` profile unwires them at `configure`) | yes |
 | `.specify/standards/`, `.specify/archiguard/standards.lock.yml`, `.specify/archiguard/ledger.jsonl` | you (step 3.1), `archiguard resolve`, `archiguard ledger add` | yes |
 | `specs/<feature>/gates/` | the gates: verdict files, sign-off, escalation notes | yes (evidence) |
 | `specs/<feature>/.scopeguard/`, `scopeguard-escalation-*.md` | scopeGuard's iteration history and escalations | the history is transient; the escalation note until decided |

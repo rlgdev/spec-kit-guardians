@@ -58,8 +58,8 @@ prints what is still missing. `specify bundle info guardians` shows the exact co
 specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
 specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
 specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
-specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.2/guardians.zip
+specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.2.0/auditguard.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.3/guardians.zip
 bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
 ```
 
@@ -75,13 +75,13 @@ stops before changing anything.
 ## What `configure` does
 
 ```text
-Guardians 0.1.2 | configure | /work/orders
+Guardians 0.1.3 | configure | /work/orders
 config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, archiguard, auditguard
 
   Siblings:
   scopeGuard : scopeGuard 0.4.1 | configure
   archiGuard : archiGuard 0.1.1 | configure
-  auditGuard : auditGuard 0.1.0 | configure
+  auditGuard : auditGuard 0.2.0 | configure
 
   Changed:
     .specify/extensions/scopeguard/scopeguard-config.yml: integration: inline -> embedded (archiGuard runs the scope gate)
@@ -91,8 +91,8 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
   Tools:
     scopeGuard : 0.4.1 | integration embedded | mode enforce | hooks 0/5
     archiGuard : 0.1.1 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
-    auditGuard : 0.1.0 | integration hooks | mode record | hooks 20/20
-    Guardians  : 0.1.2
+    auditGuard : 0.2.0 | integration hooks | mode record | hooks 20/20
+    Guardians  : 0.1.3
 
   Checks:
     [OK]   installed                   scopeguard, archiguard, auditguard, guardians
@@ -193,7 +193,7 @@ check, each switchable:
 ```yaml
 - uses: actions/checkout@v5
   with: { fetch-depth: 0 }          # auditGuard's golden checks need the history, notes and tags
-- uses: rlgdev/spec-kit-guardians@v0.1.2
+- uses: rlgdev/spec-kit-guardians@v0.1.3
   with:
     features: all                   # or specs/001-my-feature
     auditguard-golden: "true"

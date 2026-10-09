@@ -2,6 +2,8 @@
 
 > **Status:** implemented in Guardians 0.1.0 (`rlgdev/spec-kit-guardians`), tested against Spec Kit 1.0.1 and 1.0.13
 > with scopeGuard 0.4.0, archiGuard 0.1.0 and auditGuard 0.1.0 (main); 0.1.2 raises the Spec Kit floor to 1.0.3 (A10).
+> 0.1.3 pins auditGuard 0.2.0, whose default `light` profile unwires auditGuard's agent events; the bundle's
+> edit-guard cross-wiring (FR-203, FR-309) is then the guard on the trail.
 > Where the body below differs, the amendment wins.
 
 ## Amendments in the 0.1.0 implementation
