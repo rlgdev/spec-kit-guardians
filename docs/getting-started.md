@@ -8,7 +8,7 @@ not. No prior knowledge of the three tools is needed; their READMEs are the refe
 
 | Guardian | Keeps | You notice it when |
 |----------|-------|--------------------|
-| **scopeGuard** | no user story or requirement of `spec.md` is dropped by the plan, the tasks or the implementation | `/speckit.plan` or `/speckit.tasks` stops with `[FAIL] US3 ... missing from plan.md` and the agent puts it back |
+| **scopeGuard** | the scope of `spec.md` is stamped when it is handed over; no user story or requirement is dropped by the plan, the tasks or the implementation | `/speckit.plan` or `/speckit.tasks` stops with `[FAIL] US3 ... missing from plan.md` and the agent puts it back; a story deleted from `spec.md` after the stamp stops the command for you |
 | **archiGuard** | the plan and the code obey the architecture: domain map, rulebook, fitness functions, design sign-off, handover to testing | `/speckit.plan` stops with `[A3.3] ARCH-201 ... is missing`, or an agent edit of a signed plan is blocked |
 | **auditGuard** | a tamper-evident record of every command, gate verdict, waiver, human decision and out-of-band change, verifiable against git | a folder `audit/` grows with your work; `auditguard verify` proves nothing was edited afterwards |
 
@@ -52,7 +52,7 @@ specify bundle install guardians
 `scopeguard`, `archiguard`, `auditguard` and `guardians`; `specify preset list` shows `archiguard-templates`.
 
 > **Download fails?** The bundle resolves its components through the GitHub release assets of the pinned versions
-> (scopeGuard `v0.4.1`, archiGuard `v0.1.1`, auditGuard `v0.1.0`, Guardians `v0.1.2`). Where GitHub is not
+> (scopeGuard `v0.5.0`, archiGuard `v0.1.2`, auditGuard `v0.2.0`, Guardians `v0.1.3`). Where GitHub is not
 > reachable, use path B's checkout variant (`--dev`); the result is identical.
 
 ### Path B: one extension at a time
@@ -60,11 +60,11 @@ specify bundle install guardians
 From the release assets:
 
 ```bash
-specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
-specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
-specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
-specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.2/guardians.zip
+specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.5.0/scopeguard.zip
+specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.2/archiguard.zip
+specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.2/archiguard-preset.zip
+specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.2.0/auditguard.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.3/guardians.zip
 ```
 
 Spec Kit asks you to confirm each `specify extension add --from` install (`Continue with installation? [y/N]`): answer `y`.
@@ -105,7 +105,7 @@ the audit trail to archiGuard's edit guard, runs the three tools' own `configure
 auditGuard records first and last, and prints the alignment report. **Expected ending:**
 
 ```text
-  RESULT: OK | 11 ok, 0 warnings, 0 failures
+  RESULT: OK | 12 ok, 0 warnings, 0 failures
 ```
 
 with `[OK]` on every check and `[--] codeowners` (no CODEOWNERS file yet; see step 3). Run it a second time:
@@ -220,6 +220,12 @@ Use Spec Kit as before. What changes:
 - `/speckit.plan` also needs the feature's handover record, `specs/<feature>/handover.yml` (written by the formal
   handover from the BA specification tool; `archiguard scaffold handover --feature-dir specs/<feature>` gives a
   starting file). Without it, step A stops with `cannot evaluate` (exit `2`), exactly like a missing lock.
+- The first `/speckit.plan` of a feature **stamps its scope**: every ID of `spec.md` and the file's hash go into
+  `specs/<feature>/scopeguard-stamp.json` (commit it). From then on a story or requirement removed from, or added
+  to, `spec.md` stops `/speckit.plan` or `/speckit.tasks` with `SCOPE CHANGED AFTER THE STAMP`: the agent does not
+  "resolve" a spec change. You decide: approve it with
+  `bash .specify/extensions/scopeguard/scripts/bash/scopeguard.sh stamp --reason "..."`, or restore `spec.md`. When
+  the tasks gate passes it seals the carrying tasks into the stamp, and `/speckit.implement` checks those.
 - `/speckit.analyze` saves its report for the A3.6 check; `/speckit.implement` starts only on a **signed design**.
 - Every command is recorded in `audit/` with the hashes of what it touched. Commit `audit/` with your work.
 
@@ -247,7 +253,7 @@ bash .specify/scripts/bash/create-new-feature.sh --json --short-name demo "Demo 
 #   write specs/001-demo/spec.md with one "### User Story 1 - ..." and one "- **FR-001**: ..."
 bash .specify/extensions/scopeguard/scripts/bash/scopeguard.sh inventory         # the scope contract
 bash .specify/extensions/archiguard/scripts/bash/archiguard.sh scaffold handover --feature-dir specs/001-demo   # A0 reads specs/001-demo/handover.yml
-bash .specify/extensions/archiguard/scripts/bash/archiguard.sh run plan a        # step A: PASS, or 'cannot evaluate' naming what is missing (handover record, lock, map, pin)
+bash .specify/extensions/archiguard/scripts/bash/archiguard.sh run plan a        # step A: PASS (and specs/001-demo/scopeguard-stamp.json appears), or 'cannot evaluate' naming what is missing (handover record, lock, map, pin)
 bash .specify/extensions/auditguard/scripts/bash/auditguard.sh show --all        # the events recorded so far
 bash .specify/extensions/guardians/scripts/bash/guardians.sh verify              # RESULT: OK
 ```
@@ -269,7 +275,7 @@ jobs:
           fetch-depth: 0            # auditGuard's golden checks and archiGuard's traceability read the history
           submodules: true          # the standards repository at its pinned tag
       - run: git fetch -q origin "refs/notes/*:refs/notes/*" "refs/tags/*:refs/tags/*" || true
-      - uses: rlgdev/spec-kit-guardians@v0.1.2
+      - uses: rlgdev/spec-kit-guardians@v0.1.3
         with:
           features: all             # or specs/001-my-feature
 ```
@@ -279,8 +285,8 @@ auditGuard's verify (chains, seals, evidence, the golden sources) and `guardians
 to the job summary. Each part can be switched off with `scopeguard: "false"` and so on. Make the job a required
 check on the protected branch.
 
-To compose the job yourself instead, use the three siblings' actions directly (`rlgdev/spec-kit-scopeguard@v0.4.1`,
-`rlgdev/spec-kit-archiguard@v0.1.1`, `rlgdev/spec-kit-auditguard@v0.1.0`) and add one step:
+To compose the job yourself instead, use the three siblings' actions directly (`rlgdev/spec-kit-scopeguard@v0.5.0`,
+`rlgdev/spec-kit-archiguard@v0.1.2`, `rlgdev/spec-kit-auditguard@v0.2.0`) and add one step:
 
 ```yaml
       - run: python .specify/extensions/guardians/scripts/python/guardians.py verify
@@ -303,6 +309,7 @@ READMEs have Bitbucket Pipelines examples.
 | `.claude/settings.json` | Spec Kit wires the agent events (edit guard, audit guard, sessions) | yes |
 | `.specify/standards/`, `.specify/archiguard/standards.lock.yml`, `.specify/archiguard/ledger.jsonl` | you (step 3.1), `archiguard resolve`, `archiguard ledger add` | yes |
 | `specs/<feature>/gates/` | the gates: verdict files, sign-off, escalation notes | yes (evidence) |
+| `specs/<feature>/scopeguard-stamp.json` | scopeGuard, at the first `/speckit.plan` (step A); the tasks gate seals the carrying tasks into it; `scopeguard stamp --reason` re-stamps an approved scope change | yes (evidence; read-only for the agent) |
 | `specs/<feature>/.scopeguard/`, `scopeguard-escalation-*.md` | scopeGuard's iteration history and escalations | the history is transient; the escalation note until decided |
 | `audit/` | auditGuard; **never** by hand or by the agent | yes, always |
 | `.gitattributes` | `auditguard configure` adds three lines | yes |
@@ -332,6 +339,7 @@ and `AUDITGUARD_ACTOR` still apply); scopeGuard applies `local-config.yml` and `
 | `/speckit.plan` says `skipped` for the gates | the wrapped step is off because the config says `hooks`, or the other way round | `guardians configure` (it runs every tool's configure); `[WARN] hooks_match_integration` names the tool |
 | `cannot evaluate` (exit 2) in archiGuard step A | no handover record (`specs/<feature>/handover.yml`), no standards lock, no domain map, or `domain.pin` not set | step 3.1 for the standards, the lock and the pin; `archiguard scaffold handover --feature-dir specs/<feature>` for the record (in a real project the BA handover writes it); the message names the file |
 | `[A4.1] A4.1 - no design authority sign-off is recorded for this feature` on `/speckit.implement` (exit 3) | implement starts only on a signed design | `archiguard signoff --by ...` on the feature branch, after plan, tasks and analyze are green and the design is committed |
+| `SCOPE CHANGED AFTER THE STAMP` / `[no repair - needs a person]` on `/speckit.plan` or `/speckit.tasks` (exit 3) | `spec.md` lost or gained an ID since the scope stamp; the agent must not resolve that | intended: `bash .specify/extensions/scopeguard/scripts/bash/scopeguard.sh stamp --reason "..."`, then run the command again; not intended: restore `spec.md` from git |
 | `auditguard check` reports `_unassigned` events | no sprint was open | open a sprint (3.2); the events stay where they are, as a record |
 | `auditguard verify` fails `G3 unexplained_commit` | a commit touched a design artefact or code outside any recorded command (a hand edit, hooks skipped) | that is the finding; the audit trail now shows the author. Decide it with `auditguard decide` or `note` |
 | `guardians verify` exits `2` with `cannot read YAML` | no PyYAML and no sibling installed | `python -m pip install pyyaml`, or run with specify-cli's Python (`GUARDIANS_PYTHON`) |

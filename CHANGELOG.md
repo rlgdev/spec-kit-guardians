@@ -5,6 +5,25 @@ All notable changes to Guardians are documented here. The format follows
 [Semantic Versioning](https://semver.org/). A bundle version is a tested combination of the siblings'
 versions; the pins are listed with every release.
 
+## [0.1.3] - 2026-10-30
+
+Pins: scopeGuard 0.5.0 · archiGuard 0.1.2 · auditGuard 0.2.0 · archiguard-templates 0.1.2.
+
+### Added
+
+- `verify` check `scope_stamp` (warn): with scopeGuard 0.5+ and the scope gate in archiGuard's pipeline, the stamp is not
+  switched off in archiGuard's `scope-config.yml` and archiGuard's `pipeline.speckit.plan.step_a` runs a `scope` stamp or
+  inventory, so the scope of `spec.md` is stamped at hand-over. Not applicable below scopeGuard 0.5.0.
+- The getting-started guide explains the stamp: where it is written, what `SCOPE CHANGED AFTER THE STAMP` means and how a
+  person re-stamps (`scopeguard stamp --reason`).
+
+### Changed
+
+- Pins: scopeGuard 0.5.0 (the scope stamp), archiGuard 0.1.2 (stamps in plan step A, keeps the agent away from the stamp
+  file, accepts scopeGuard `<0.6`), auditGuard 0.2.0 (the light profile), archiguard-templates 0.1.2. The constants
+  Guardians assumes for the siblings follow (`ARCHIGUARD_SCOPE_RANGE`, `ARCHIGUARD_READONLY`); the test fixtures are
+  the siblings' templates at those versions.
+
 ## [0.1.2] - 2026-10-07
 
 Pins unchanged: scopeGuard 0.4.1 · archiGuard 0.1.1 · auditGuard 0.1.0 · archiguard-templates 0.1.1.

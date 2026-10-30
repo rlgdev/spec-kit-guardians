@@ -24,6 +24,7 @@ checks:
   preset_matches_integration: fail # archiguard-templates present iff archiGuard runs inline; no scopeguard-templates
   versions_in_range: fail          # the siblings accept each other's installed versions
   scopeguard_embedded: fail        # scopeGuard is embedded when archiGuard runs the scope gate
+  scope_stamp: warn                # the scope is stamped at hand-over (scopeGuard 0.5+): stamp on, step A of plan runs it
   auditguard_integration: warn     # auditGuard integration is hooks or workflow
   hook_order: fail                 # auditGuard first and last on shared events
   hooks_match_integration: warn    # enabled hooks only for a tool whose integration is hooks

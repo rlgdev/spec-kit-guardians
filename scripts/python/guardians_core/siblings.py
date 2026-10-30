@@ -12,8 +12,8 @@ from .common import EXTENSIONS_YML, GUARDIANS, PRESETS, SIBLINGS, GuardiansError
 
 # What the siblings assume when a key is missing from their config (their config templates, at the pins).
 ARCHIGUARD_READONLY = [".specify/standards/**", ".specify/archiguard/**", ".specify/extensions/archiguard/**",
-                       "specs/*/gates/**/*.json"]
-ARCHIGUARD_SCOPE_RANGE = ">=0.3.0,<0.5"
+                       "specs/*/gates/**/*.json", "specs/*/scopeguard-stamp.json"]
+ARCHIGUARD_SCOPE_RANGE = ">=0.3.0,<0.6"
 AUDITGUARD_READONLY = ["audit/**", ".specify/extensions/auditguard/**"]
 AUDITGUARD_COLLECTOR_RANGES = {"scopeguard": ">=0.4,<0.6", "archiguard": ">=0.1,<0.3"}
 AUDITGUARD_GITATTRIBUTES = ["{audit}/**/*.jsonl -text", "{audit}/**/evidence/** -text", "{audit}/**/seal.json -text"]

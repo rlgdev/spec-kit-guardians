@@ -30,7 +30,7 @@ def test_aligned_project_passes_every_check(aligned: FakeProject):
     assert tools["auditguard"]["hooks_on"] == 20 and tools["auditguard"]["mode"] == "record"
     assert tools["guardians"]["version"] == VERSIONS["guardians"]
     text = report.text()
-    assert "RESULT: OK | 12 ok, 0 warnings, 0 failures" in text
+    assert "RESULT: OK | 13 ok, 0 warnings, 0 failures" in text
     assert f"scopeGuard : {VERSIONS['scopeguard']} | integration embedded | mode enforce | hooks 0/5" in text
 
 
@@ -78,10 +78,10 @@ def test_scopeguard_templates_preset_is_refused(aligned: FakeProject):
 
 
 def test_versions_in_range(aligned: FakeProject):
-    aligned.replace("archiguard", 'version: ">=0.3.0,<0.5"', 'version: ">=0.5.0,<0.6"')
+    aligned.replace("archiguard", 'version: ">=0.3.0,<0.6"', 'version: ">=0.6.0,<0.7"')
     check = next(c for c in verify(aligned).checks if c.id == "versions_in_range")
     assert check.status == "fail" and f"does not accept scopeGuard {VERSIONS['scopeguard']}" in check.message
-    aligned.replace("archiguard", 'version: ">=0.5.0,<0.6"', 'version: ">=0.3.0,<0.5"')
+    aligned.replace("archiguard", 'version: ">=0.6.0,<0.7"', 'version: ">=0.3.0,<0.6"')
     aligned.replace("auditguard", 'version: ">=0.1,<0.3"', 'version: ">=0.2,<0.3"')
     check = next(c for c in verify(aligned).checks if c.id == "versions_in_range")
     assert check.status == "fail" and "collectors.archiguard.version" in check.message
@@ -95,7 +95,32 @@ def test_scopeguard_embedded(aligned: FakeProject):
 
 def test_scopeguard_embedded_not_applicable_without_the_scope_gate(aligned: FakeProject):
     aligned.write(".specify/extensions/archiguard/NO_SCOPE", "")
-    assert status_of(verify(aligned), "scopeguard_embedded") == "na"
+    report = verify(aligned)
+    assert status_of(report, "scopeguard_embedded") == "na" and status_of(report, "scope_stamp") == "na"
+
+
+def test_scope_stamp(aligned: FakeProject):
+    check = next(c for c in verify(aligned).checks if c.id == "scope_stamp")
+    assert check.status == "ok" and "scope [stamp inventory]" in check.message, check.message
+    # switched off in the scope-config.yml archiGuard hands to scopeGuard
+    aligned.write(".specify/extensions/archiguard/scope-config.yml", "mode: enforce\nstamp:\n  enabled: false\n")
+    check = next(c for c in verify(aligned).checks if c.id == "scope_stamp")
+    assert check.status == "warn" and "stamp.enabled: false" in check.message and "scope-config.yml" in check.fix
+    aligned.write(".specify/extensions/archiguard/scope-config.yml", "mode: enforce\nstamp:\n  enabled: true\n")
+    # a custom plan step A without the scope gate
+    aligned.replace("archiguard", "      - { gate: scope, run: [stamp, inventory] }", "")
+    check = next(c for c in verify(aligned).checks if c.id == "scope_stamp")
+    assert check.status == "warn" and "never stamped" in check.message and "run: [stamp, inventory]" in check.fix
+    aligned.replace("archiguard", "      - { gate: A3, run: [A3.1] }", "      - { gate: A3, run: [A3.1] }\n      - { gate: scope, run: [inventory] }")
+    check = next(c for c in verify(aligned).checks if c.id == "scope_stamp")
+    assert check.status == "ok" and "scope [inventory]" in check.message   # inventory stamps on first use too
+
+
+def test_scope_stamp_needs_scopeguard_0_5(aligned: FakeProject):
+    manifest = aligned.path(".specify/extensions/scopeguard/extension.yml")
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace(VERSIONS["scopeguard"], "0.4.1"), encoding="utf-8")
+    check = next(c for c in verify(aligned).checks if c.id == "scope_stamp")
+    assert check.status == "na" and "0.4.1 has no scope stamp" in check.message
 
 
 def test_auditguard_integration(aligned: FakeProject):
@@ -210,7 +235,7 @@ def test_cli_verify_text_and_json(aligned: FakeProject, chdir):
     code, out = guardians_cli("verify", "--json")
     import json
     data = json.loads(out)
-    assert code == 0 and data["status"] == "ok" and len(data["checks"]) == 12 and data["tools"]["guardians"]["version"] == VERSIONS["guardians"]
+    assert code == 0 and data["status"] == "ok" and len(data["checks"]) == 13 and data["tools"]["guardians"]["version"] == VERSIONS["guardians"]
 
 
 def test_cli_exit_codes(fresh: FakeProject, chdir, tmp_path: Path):
