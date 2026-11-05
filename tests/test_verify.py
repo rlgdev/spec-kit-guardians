@@ -30,7 +30,7 @@ def test_aligned_project_passes_every_check(aligned: FakeProject):
     assert tools["auditguard"]["hooks_on"] == 20 and tools["auditguard"]["mode"] == "record"
     assert tools["guardians"]["version"] == VERSIONS["guardians"]
     text = report.text()
-    assert "RESULT: OK | 12 ok, 0 warnings, 0 failures" in text
+    assert "RESULT: OK | 13 ok, 0 warnings, 0 failures" in text
     assert f"scopeGuard : {VERSIONS['scopeguard']} | integration embedded | mode enforce | hooks 0/5" in text
 
 
@@ -82,9 +82,28 @@ def test_versions_in_range(aligned: FakeProject):
     check = next(c for c in verify(aligned).checks if c.id == "versions_in_range")
     assert check.status == "fail" and f"does not accept scopeGuard {VERSIONS['scopeguard']}" in check.message
     aligned.replace("archiguard", 'version: ">=0.5.0,<0.6"', 'version: ">=0.3.0,<0.5"')
-    aligned.replace("auditguard", 'version: ">=0.1,<0.3"', 'version: ">=0.2,<0.3"')
+    aligned.replace("auditguard", 'version: ">=0.1,<0.3"', 'version: ">=0.3,<0.4"')
     check = next(c for c in verify(aligned).checks if c.id == "versions_in_range")
     assert check.status == "fail" and "collectors.archiguard.version" in check.message
+
+
+def test_loop_feedback_recorded(aligned: FakeProject):
+    check = next(c for c in verify(aligned).checks if c.id == "loop_feedback_recorded")
+    assert check.status == "ok" and "auditGuard records it" in check.message
+    aligned.replace("auditguard", "    feedback: true ", "    feedback: false ")
+    check = next(c for c in verify(aligned).checks if c.id == "loop_feedback_recorded")
+    assert check.status == "warn" and "collectors.archiguard.feedback: false" in check.message
+    assert "collectors.archiguard.feedback: true" in check.fix
+    aligned.replace("archiguard", "feedback:\n  enabled: true", "feedback:\n  enabled: false")
+    assert status_of(verify(aligned), "loop_feedback_recorded") == "na"
+
+
+def test_loop_feedback_needs_auditguard_0_3(aligned: FakeProject):
+    manifest = aligned.root / ".specify/extensions/auditguard/extension.yml"
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace(f'version: "{VERSIONS["auditguard"]}"', 'version: "0.2.0"'),
+                        encoding="utf-8")
+    check = next(c for c in verify(aligned).checks if c.id == "loop_feedback_recorded")
+    assert check.status == "warn" and "auditGuard 0.2.0 does not record it" in check.message
 
 
 def test_scopeguard_embedded(aligned: FakeProject):
@@ -210,7 +229,7 @@ def test_cli_verify_text_and_json(aligned: FakeProject, chdir):
     code, out = guardians_cli("verify", "--json")
     import json
     data = json.loads(out)
-    assert code == 0 and data["status"] == "ok" and len(data["checks"]) == 12 and data["tools"]["guardians"]["version"] == VERSIONS["guardians"]
+    assert code == 0 and data["status"] == "ok" and len(data["checks"]) == 13 and data["tools"]["guardians"]["version"] == VERSIONS["guardians"]
 
 
 def test_cli_exit_codes(fresh: FakeProject, chdir, tmp_path: Path):

@@ -5,6 +5,28 @@ All notable changes to Guardians are documented here. The format follows
 [Semantic Versioning](https://semver.org/). A bundle version is a tested combination of the siblings'
 versions; the pins are listed with every release.
 
+## [0.2.0] - 2026-11-05
+
+Pins: scopeGuard 0.4.1 · archiGuard 0.2.0 · auditGuard 0.3.0 · archiguard-templates 0.2.0.
+
+The loop feedback to the domain master design: after coding, archiGuard 0.2.0 reports what a feature did that the
+domain map does not describe, each item with a short suggestion for the next iteration. It is evidence, never a gate.
+auditGuard 0.3.0 records it, lets a person triage it (`decide feedback:<id>`) and exports backlog candidates
+(`auditguard backlog`).
+[Specification](https://github.com/rlgdev/spec-kit-archiguard/blob/main/docs/loop-feedback-specification.md).
+
+### Added
+
+- `guardians verify` check `loop_feedback_recorded` (warn): `[OK]` when auditGuard records the feedback archiGuard
+  writes. `[WARN]` when auditGuard is older than 0.3.0 or has `collectors.archiguard.feedback: false`. `[--]` when the
+  feedback is switched off or archiGuard is older than 0.2.0.
+- Getting started: *After coding: the loop feedback* (when it is shown, who it is for, the triage commands).
+
+### Changed
+
+- The bundle pins archiGuard 0.2.0, the archiguard-templates preset 0.2.0 and auditGuard 0.3.0. The catalogs, the
+  action, the CI refs and the test fixtures follow them.
+
 ## [0.1.2] - 2026-10-07
 
 Pins unchanged: scopeGuard 0.4.1 · archiGuard 0.1.1 · auditGuard 0.1.0 · archiguard-templates 0.1.1.

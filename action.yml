@@ -48,14 +48,14 @@ runs:
 
     - name: archiGuard
       if: ${{ inputs.archiguard == 'true' }}
-      uses: rlgdev/spec-kit-archiguard@v0.1.1
+      uses: rlgdev/spec-kit-archiguard@v0.2.0
       with:
         features: ${{ inputs.features }}
         working-directory: ${{ inputs.working-directory }}
 
     - name: auditGuard
       if: ${{ inputs.auditguard == 'true' }}
-      uses: rlgdev/spec-kit-auditguard@v0.1.0
+      uses: rlgdev/spec-kit-auditguard@v0.3.0
       with:
         command: verify
         golden: ${{ inputs.auditguard-golden }}

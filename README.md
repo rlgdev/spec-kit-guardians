@@ -21,8 +21,9 @@ versions tested together, plus a thin extension with two commands:
 - `guardians configure` — runs the three tools' own `configure` in order and does the cross-wiring each of them
   documents but cannot do for the others: scopeGuard `integration: embedded` (archiGuard runs the scope gate),
   the audit trail in archiGuard's edit guard, auditGuard's hooks first and last on the events they share.
-- `guardians verify` — twelve checks that the three configurations agree (versions, integration, hook order,
-  base branch, edit guard, modes, `.gitattributes`, CODEOWNERS). Exit `1` on a failure; for CI.
+- `guardians verify` — thirteen checks that the three configurations agree (versions, integration, hook order,
+  base branch, edit guard, modes, `.gitattributes`, CODEOWNERS, auditGuard recording archiGuard's loop feedback).
+  Exit `1` on a failure; for CI.
 
 Everything else stays where it is: each Guardian keeps its own engine, config file, release cadence and
 documentation. Guardians writes three things and nothing else: hook priorities in `.specify/extensions.yml`,
@@ -56,10 +57,10 @@ prints what is still missing. `specify bundle info guardians` shows the exact co
 
 ```bash
 specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
-specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
-specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
-specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.2/guardians.zip
+specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.2.0/archiguard.zip
+specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.2.0/archiguard-preset.zip
+specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.3.0/auditguard.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.2.0/guardians.zip
 bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
 ```
 
@@ -75,13 +76,13 @@ stops before changing anything.
 ## What `configure` does
 
 ```text
-Guardians 0.1.2 | configure | /work/orders
+Guardians 0.2.0 | configure | /work/orders
 config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, archiguard, auditguard
 
   Siblings:
   scopeGuard : scopeGuard 0.4.1 | configure
-  archiGuard : archiGuard 0.1.1 | configure
-  auditGuard : auditGuard 0.1.0 | configure
+  archiGuard : archiGuard 0.2.0 | configure
+  auditGuard : auditGuard 0.3.0 | configure
 
   Changed:
     .specify/extensions/scopeguard/scopeguard-config.yml: integration: inline -> embedded (archiGuard runs the scope gate)
@@ -90,9 +91,9 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
 
   Tools:
     scopeGuard : 0.4.1 | integration embedded | mode enforce | hooks 0/5
-    archiGuard : 0.1.1 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
-    auditGuard : 0.1.0 | integration hooks | mode record | hooks 20/20
-    Guardians  : 0.1.2
+    archiGuard : 0.2.0 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
+    auditGuard : 0.3.0 | integration hooks | mode record | hooks 20/20
+    Guardians  : 0.2.0
 
   Checks:
     [OK]   installed                   scopeguard, archiguard, auditguard, guardians
@@ -107,8 +108,9 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
     [OK]   modes_agree                 scopeGuard and archiGuard enforce; auditGuard record (records, not compared)
     [OK]   gitattributes               the audit trail is excluded from line-ending conversion
     [--]   codeowners                  no CODEOWNERS file; consider owners for audit/, .specify/standards/, ...
+    [OK]   loop_feedback_recorded      archiGuard writes the loop feedback after coding; auditGuard records it for triage and the backlog
 
-  RESULT: OK | 11 ok, 0 warnings, 0 failures
+  RESULT: OK | 12 ok, 0 warnings, 0 failures
 ```
 
 Order of work: the two config edits first (so scopeGuard's own `configure` already sees `embedded` and switches
@@ -138,6 +140,7 @@ matters as soon as archiGuard runs through hooks.
 | `modes_agree` | warn | scopeGuard `mode` ≠ archiGuard `mode` (auditGuard's `record`/`enforce` means something else and is only shown) |
 | `gitattributes` | warn | auditGuard's three `-text` lines are missing |
 | `codeowners` | warn | a CODEOWNERS file exists but names no owner for `audit/`, `.specify/standards/`, `.specify/archiguard/` or `.specify/extensions/` |
+| `loop_feedback_recorded` | warn | archiGuard (0.2+) writes the loop feedback to the domain master design after coding, but auditGuard is older than 0.3.0 or has `collectors.archiguard.feedback: false`, so nobody records and triages it; `[--]` when the feedback is switched off |
 
 Each `[WARN]` and `[FAIL]` line comes with a `fix:` - a command, or the two files and keys that disagree.
 Severities are set in `guardians-config.yml` (below). `verify --json` prints the same as data; exit `1` on a
@@ -183,6 +186,7 @@ hook_priority:
 checks:                                       # fail | warn | off  (quote "off" or write it as a string: YAML reads a bare off as false)
   git_base_agrees: fail
   codeowners: warn
+  loop_feedback_recorded: warn
 ```
 
 ## CI
@@ -193,7 +197,7 @@ check, each switchable:
 ```yaml
 - uses: actions/checkout@v5
   with: { fetch-depth: 0 }          # auditGuard's golden checks need the history, notes and tags
-- uses: rlgdev/spec-kit-guardians@v0.1.2
+- uses: rlgdev/spec-kit-guardians@v0.2.0
   with:
     features: all                   # or specs/001-my-feature
     auditguard-golden: "true"

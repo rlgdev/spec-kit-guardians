@@ -52,7 +52,7 @@ specify bundle install guardians
 `scopeguard`, `archiguard`, `auditguard` and `guardians`; `specify preset list` shows `archiguard-templates`.
 
 > **Download fails?** The bundle resolves its components through the GitHub release assets of the pinned versions
-> (scopeGuard `v0.4.1`, archiGuard `v0.1.1`, auditGuard `v0.1.0`, Guardians `v0.1.2`). Where GitHub is not
+> (scopeGuard `v0.4.1`, archiGuard `v0.2.0`, auditGuard `v0.3.0`, Guardians `v0.2.0`). Where GitHub is not
 > reachable, use path B's checkout variant (`--dev`); the result is identical.
 
 ### Path B: one extension at a time
@@ -61,10 +61,10 @@ From the release assets:
 
 ```bash
 specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
-specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
-specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
-specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.1.0/auditguard.zip
-specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.2/guardians.zip
+specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.2.0/archiguard.zip
+specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.2.0/archiguard-preset.zip
+specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.3.0/auditguard.zip
+specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.2.0/guardians.zip
 ```
 
 Spec Kit asks you to confirm each `specify extension add --from` install (`Continue with installation? [y/N]`): answer `y`.
@@ -240,6 +240,36 @@ bash $U anchor --sprint S-2026-41 --push          # note on HEAD + annotated tag
 bash $U export --sprint S-2026-41                 # audit-pack-S-2026-41.zip, verifies offline with `verify --pack`
 ```
 
+### After coding: the loop feedback
+
+When `/speckit.implement` step B ends, archiGuard compares what the feature did with the domain master design (the
+domain map) and prints a `FEEDBACK` block after the result. The block is **evidence, never a gate**: it lists what the
+map does not describe, each item with a short suggestion for the next iteration. Examples: code no context maps, a
+new build unit (a new service?), a deployment unit the map does not declare, a change in another context's code, a
+dependency only a waiver lets through, a term outside the glossary. It also answers the topology question: did the
+feature extend an existing unit or create a new one? The agent copies the summary into its Completion Report and does
+not act on it. The full list is in `specs/<feature>/gates/loop-feedback.md`.
+
+| When | Where you see it | Who it is for |
+|------|------------------|---------------|
+| end of `/speckit.implement` | the `FEEDBACK` block and the Completion Report | the developer |
+| `archiguard handover` (4 → 5) | `handover-4-5.json` → `feedback` | the QA lead (a new unit can mean a new deployment) |
+| `archiguard report --save`, final commit | the compliance report's *Loop feedback* section: **the final feedback** | the tech lead at PR approval (it never blocks it) |
+| sprint review | `auditguard backlog --status new`, then one decision per item | the lead architect, the domain owners |
+| sprint close | the triage counts in `seal.json`, `audit/sprints/<S>/loop-feedback.md` | the audit record |
+
+```bash
+bash $U backlog --status new                                       # what waits for a triage, one table per addressee
+bash $U decide feedback:LF-2ba4e67d accept --by "Lead architect" --reason "declare the deployable of orders in DMD 1.5.0"
+bash $U decide feedback:LF-831ba84c defer  --by "Orders domain owner" --reason "decide with the fulfilment team"
+bash $U backlog --status accepted --format csv --out backlog.csv   # import into your tracker
+bash $U decide feedback:LF-2ba4e67d accept --ref ARCH-77 --by "Lead architect"   # link the tracker item
+```
+
+`guardians verify` checks that auditGuard records what archiGuard writes (`loop_feedback_recorded`).
+[archiGuard's docs/loop-feedback.md](https://github.com/rlgdev/spec-kit-archiguard/blob/main/docs/loop-feedback.md)
+describes the kinds of item and the optional `deployable` / `deployables:` keys of the domain map.
+
 A five-minute smoke test on a fresh project, without an agent:
 
 ```bash
@@ -269,7 +299,7 @@ jobs:
           fetch-depth: 0            # auditGuard's golden checks and archiGuard's traceability read the history
           submodules: true          # the standards repository at its pinned tag
       - run: git fetch -q origin "refs/notes/*:refs/notes/*" "refs/tags/*:refs/tags/*" || true
-      - uses: rlgdev/spec-kit-guardians@v0.1.2
+      - uses: rlgdev/spec-kit-guardians@v0.2.0
         with:
           features: all             # or specs/001-my-feature
 ```
@@ -280,7 +310,7 @@ to the job summary. Each part can be switched off with `scopeguard: "false"` and
 check on the protected branch.
 
 To compose the job yourself instead, use the three siblings' actions directly (`rlgdev/spec-kit-scopeguard@v0.4.1`,
-`rlgdev/spec-kit-archiguard@v0.1.1`, `rlgdev/spec-kit-auditguard@v0.1.0`) and add one step:
+`rlgdev/spec-kit-archiguard@v0.2.0`, `rlgdev/spec-kit-auditguard@v0.3.0`) and add one step:
 
 ```yaml
       - run: python .specify/extensions/guardians/scripts/python/guardians.py verify
@@ -302,7 +332,7 @@ READMEs have Bitbucket Pipelines examples.
 | `.claude/skills/speckit-*/` (or your agent's folder) | Spec Kit renders the wrapped commands | yes |
 | `.claude/settings.json` | Spec Kit wires the agent events (edit guard, audit guard, sessions) | yes |
 | `.specify/standards/`, `.specify/archiguard/standards.lock.yml`, `.specify/archiguard/ledger.jsonl` | you (step 3.1), `archiguard resolve`, `archiguard ledger add` | yes |
-| `specs/<feature>/gates/` | the gates: verdict files, sign-off, escalation notes | yes (evidence) |
+| `specs/<feature>/gates/` | the gates: verdict files, sign-off, escalation notes, the loop feedback (`loop-feedback.json` / `.md`) | yes (evidence) |
 | `specs/<feature>/.scopeguard/`, `scopeguard-escalation-*.md` | scopeGuard's iteration history and escalations | the history is transient; the escalation note until decided |
 | `audit/` | auditGuard; **never** by hand or by the agent | yes, always |
 | `.gitattributes` | `auditguard configure` adds three lines | yes |
