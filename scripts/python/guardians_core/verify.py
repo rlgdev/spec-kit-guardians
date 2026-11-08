@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from . import __version__
-from . import speckit
+from . import speckit, yamlio
 from .common import GUARDIANS, NAMES, SIBLINGS, GuardiansError, rel, version_satisfies
 from .config import CHECKS, Config
 from .siblings import (ARCHIGUARD_READONLY, ARCHIGUARD_SCOPE_RANGE, AUDITGUARD_COLLECTOR_RANGES,
@@ -262,6 +262,33 @@ def check_scopeguard_embedded(project: Project, c: Check) -> Check:
     return c.ok("scopeGuard integration embedded (archiGuard runs the scope gate)")
 
 
+def check_scope_stamp(project: Project, c: Check) -> Check:
+    """The family default since scopeGuard 0.5 / archiGuard 0.1.2: the scope of spec.md is stamped at hand-over."""
+    sg, ag = project.sibling("scopeguard"), project.sibling("archiguard")
+    if not (sg.installed and ag.installed):
+        return c.na("needs scopeGuard and archiGuard")
+    if not version_satisfies(sg.version or "0", ">=0.5.0"):
+        return c.na(f"scopeGuard {sg.version} has no scope stamp (0.5.0+)")
+    if ag.scope_in_pipeline() is False:
+        return c.na("archiGuard's pipeline does not run the scope gate")
+    scope_cfg = str(ag.get("gates", "scope", "config", default=".specify/extensions/archiguard/scope-config.yml"))
+    scope_path = project.root / scope_cfg
+    if scope_path.is_file():
+        enabled = yamlio.get(yamlio.load_file(scope_path), "stamp", "enabled", default=True)
+        if str(enabled).strip().lower() in ("false", "no", "off", "0"):
+            return c.problem(f"{scope_cfg} sets stamp.enabled: false - the scope is not stamped at hand-over, a changed spec.md "
+                             "is not noticed", f"remove stamp.enabled: false from {scope_cfg} (the family default is on)")
+    step_a = ag.get("pipeline", "speckit.plan", "step_a")
+    if isinstance(step_a, list):
+        runs = [str(r) for entry in step_a if isinstance(entry, dict) and entry.get("gate") == "scope"
+                for r in (entry.get("run") or [])]
+        if "stamp" not in runs and "inventory" not in runs:
+            return c.problem("archiGuard's pipeline.speckit.plan.step_a runs no scope stamp or inventory - the scope is never stamped",
+                             f"add {{ gate: scope, run: [stamp, inventory] }} to pipeline.speckit.plan.step_a in {_cfg_path(ag)}")
+        return c.ok(f"scopeGuard {sg.version} stamps the scope in archiGuard's plan step A (scope [{' '.join(runs)}])")
+    return c.ok(f"scopeGuard {sg.version} stamps the scope in archiGuard's plan step A (default pipeline)")
+
+
 def check_auditguard_integration(project: Project, c: Check) -> Check:
     au = project.sibling("auditguard")
     if not au.installed:
@@ -467,6 +494,7 @@ CHECK_FUNCTIONS = {
     "preset_matches_integration": check_preset_matches_integration,
     "versions_in_range": check_versions_in_range,
     "scopeguard_embedded": check_scopeguard_embedded,
+    "scope_stamp": check_scope_stamp,
     "auditguard_integration": check_auditguard_integration,
     "hook_order": check_hook_order,
     "hooks_match_integration": check_hooks_match_integration,

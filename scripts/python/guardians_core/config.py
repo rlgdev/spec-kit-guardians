@@ -11,7 +11,7 @@ from .common import SIBLINGS, GuardiansError
 
 CHECKS = (
     "installed", "catalogs_keep_defaults", "preset_matches_integration", "versions_in_range", "scopeguard_embedded",
-    "auditguard_integration", "hook_order", "hooks_match_integration", "git_base_agrees",
+    "scope_stamp", "auditguard_integration", "hook_order", "hooks_match_integration", "git_base_agrees",
     "edit_guard_covers_audit", "agent_events_wired", "modes_agree", "gitattributes", "codeowners",
 )
 SEVERITIES = ("fail", "warn", "off")
@@ -26,6 +26,7 @@ DEFAULTS: Dict[str, Any] = {
         "preset_matches_integration": "fail",
         "versions_in_range": "fail",
         "scopeguard_embedded": "fail",
+        "scope_stamp": "warn",
         "auditguard_integration": "warn",
         "hook_order": "fail",
         "hooks_match_integration": "warn",

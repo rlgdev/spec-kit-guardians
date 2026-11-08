@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "updated_at": "2026-10-07T12:00:00Z",
+  "updated_at": "2026-10-30T08:00:00Z",
   "catalog_url": "https://raw.githubusercontent.com/rlgdev/spec-kit-guardians/main/catalog/bundles.json",
   "bundles": {
     "guardians": {
@@ -25,8 +25,15 @@
         "steps": 0,
         "workflows": 0
       },
-      "tags": ["governance", "architecture", "scope", "audit", "quality-gate"],
-      "verified": false
+      "tags": [
+        "governance",
+        "architecture",
+        "scope",
+        "audit",
+        "quality-gate"
+      ],
+      "verified": false,
+      "updated_at": "2026-10-30T08:00:00Z"
     }
   }
 }

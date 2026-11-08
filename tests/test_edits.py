@@ -53,7 +53,7 @@ def test_always_readonly_flow_list_gains_the_audit_paths():
     assert added == ["audit/**", ".specify/extensions/auditguard/**"]
     data = yaml.safe_load(new)
     assert data["edit_guard"]["always_readonly"][-2:] == ["audit/**", ".specify/extensions/auditguard/**"]
-    assert data["edit_guard"]["always_readonly"][:4] == yaml.safe_load(text)["edit_guard"]["always_readonly"]
+    assert data["edit_guard"]["always_readonly"][:5] == yaml.safe_load(text)["edit_guard"]["always_readonly"]
     changed = [(a, b) for a, b in zip(text.splitlines(), new.splitlines()) if a != b]
     assert len(changed) == 1 and changed[0][0].lstrip().startswith("always_readonly:")
     assert len(text.splitlines()) == len(new.splitlines())

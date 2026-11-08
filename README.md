@@ -11,7 +11,7 @@ One cover for the three Guardians of the AI-native SDLC on [GitHub Spec Kit](htt
 
 | Guardian | Keeps | Repository |
 |----------|-------|------------|
-| **scopeGuard** | no user story or requirement of `spec.md` is dropped by plan, tasks or implementation | [spec-kit-scopeguard](https://github.com/rlgdev/spec-kit-scopeguard) |
+| **scopeGuard** | the scope of `spec.md` is stamped at hand-over; no user story or requirement is dropped by plan, tasks or implementation, and a scope change after the stamp goes to a person | [spec-kit-scopeguard](https://github.com/rlgdev/spec-kit-scopeguard) |
 | **archiGuard** | the design and the code conform to the architecture: domain guard, plan conformance, fitness functions, handover 4→5, the edit guard | [spec-kit-archiguard](https://github.com/rlgdev/spec-kit-archiguard) |
 | **auditGuard** | a tamper-evident trail of every command, gate report, waiver, human decision and out-of-band change, verifiable against git | [spec-kit-auditguard](https://github.com/rlgdev/spec-kit-auditguard) |
 
@@ -21,9 +21,9 @@ versions tested together, plus a thin extension with two commands:
 - `guardians configure` — runs the three tools' own `configure` in order and does the cross-wiring each of them
   documents but cannot do for the others: scopeGuard `integration: embedded` (archiGuard runs the scope gate),
   the audit trail in archiGuard's edit guard, auditGuard's hooks first and last on the events they share.
-- `guardians verify` — fourteen checks that the three configurations agree (versions, integration, hook order,
-  base branch, edit guard, modes, `.gitattributes`, CODEOWNERS), that Spec Kit's catalog files still list the
-  catalogs of every other extension, and that the agent events carry archiGuard's and auditGuard's guards. Exit `1`
+- `guardians verify` — fifteen checks that the three configurations agree (versions, integration, hook order, the
+  scope stamp, base branch, edit guard, modes, `.gitattributes`, CODEOWNERS), that Spec Kit's catalog files still list
+  the catalogs of every other extension, and that the agent events carry archiGuard's and auditGuard's guards. Exit `1`
   on a failure; for CI.
 
 Everything else stays where it is: each Guardian keeps its own engine, config file, release cadence and
@@ -65,9 +65,9 @@ prints what is still missing. `specify bundle info guardians` shows the exact co
 <summary>Without the bundle (one extension at a time)</summary>
 
 ```bash
-specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
-specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard.zip
-specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.1/archiguard-preset.zip
+specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.5.0/scopeguard.zip
+specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.2/archiguard.zip
+specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.1.2/archiguard-preset.zip
 specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.2.0/auditguard.zip
 specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.1.3/guardians.zip
 bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
@@ -99,8 +99,8 @@ Guardians 0.1.3 | configure | /work/orders
 config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, archiguard, auditguard
 
   Siblings:
-  scopeGuard : scopeGuard 0.4.1 | configure
-  archiGuard : archiGuard 0.1.1 | configure
+  scopeGuard : scopeGuard 0.5.0 | configure
+  archiGuard : archiGuard 0.1.2 | configure
   auditGuard : auditGuard 0.2.0 | configure
 
   Changed:
@@ -110,8 +110,8 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
     .specify/extensions.yml: 20 hook priorities set: auditguard after_* 10 -> 90 (10), auditguard before_* 10 -> 1 (10)
 
   Tools:
-    scopeGuard : 0.4.1 | integration embedded | mode enforce | hooks 0/5
-    archiGuard : 0.1.1 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
+    scopeGuard : 0.5.0 | integration embedded | mode enforce | hooks 0/5
+    archiGuard : 0.1.2 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
     auditGuard : 0.2.0 | integration hooks | mode record | hooks 20/20
     Guardians  : 0.1.3
 
@@ -119,8 +119,9 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
     [OK]   installed                   scopeguard, archiguard, auditguard, guardians
     [OK]   catalogs_keep_defaults      extensions: .specify/extension-catalogs.yml keeps default, community; presets: ...
     [OK]   preset_matches_integration  archiguard-templates installed, archiGuard integration inline; scopeguard-templates absent
-    [OK]   versions_in_range           scopeGuard 0.4.1 in archiGuard's >=0.3.0,<0.5; scopeGuard 0.4.1 in auditGuard's >=0.4,<0.6; ...
+    [OK]   versions_in_range           scopeGuard 0.5.0 in archiGuard's >=0.3.0,<0.6; scopeGuard 0.5.0 in auditGuard's >=0.4,<0.6; ...
     [OK]   scopeguard_embedded         scopeGuard integration embedded (archiGuard runs the scope gate)
+    [OK]   scope_stamp                 scopeGuard 0.5.0 stamps the scope in archiGuard's plan step A (scope [stamp inventory])
     [OK]   auditguard_integration      auditGuard integration hooks
     [OK]   hook_order                  no event is shared by two Guardians (gates inline / embedded); auditGuard records alone
     [OK]   hooks_match_integration     scopeGuard 0/5 (embedded); archiGuard 0/6 (inline); auditGuard 20/20 (hooks)
@@ -178,6 +179,7 @@ matters as soon as archiGuard runs through hooks.
 | `preset_matches_integration` | fail | archiGuard says `inline` without `archiguard-templates` (it silently falls back to hooks); the preset is installed while archiGuard runs through hooks (gates twice); `scopeguard-templates` is installed |
 | `versions_in_range` | fail | scopeGuard's version is outside archiGuard's `gates.scope.version`, or a sibling's version is outside auditGuard's `collectors.<id>.version` |
 | `scopeguard_embedded` | fail | archiGuard runs the scope gate but scopeGuard is not `embedded` |
+| `scope_stamp` | warn | the scope stamp (scopeGuard 0.5+) is switched off in archiGuard's `scope-config.yml`, or archiGuard's plan step A runs no `scope` stamp or inventory, so the scope is never stamped at hand-over |
 | `auditguard_integration` | warn | auditGuard's integration is neither `hooks` nor `workflow` |
 | `hook_order` | fail | on a shared event an enabled auditGuard `before_*` hook does not run first or an `after_*` hook does not run last |
 | `hooks_match_integration` | warn | a tool has hooks enabled although its integration is not `hooks`, or none enabled although it is |
@@ -250,7 +252,7 @@ check, each switchable:
 ```
 
 The verify output goes to the job summary. archiGuard's and auditGuard's actions use the engine the project installed
-(`.specify/extensions/<id>/`), falling back to their own; scopeGuard's action at the pinned `v0.4.1` runs its own engine
+(`.specify/extensions/<id>/`), falling back to their own; scopeGuard's action at the pinned `v0.5.0` runs its own engine
 (it still reads the project's `scopeguard-config.yml`). GitHub resolves every action a composite action uses
 before it runs, so this action needs the three siblings released at the bundle's pins (`rlgdev/spec-kit-<id>@v<pin>`);
 until then use the siblings' actions directly and run `guardians verify` as a plain step.

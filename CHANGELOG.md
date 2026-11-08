@@ -36,6 +36,11 @@ release of this version pins.
   user-level catalog file is left alone (`verify` warns with the commands); a dry run lists both repairs under
   `Would change:`; without `specify` on PATH, on the `generic` integration or with Guardians disabled `configure`
   prints the command in a note instead. `checks.<id>: off` turns a check and its repair off.
+- `verify` check `scope_stamp` (warn): with scopeGuard 0.5+ and the scope gate in archiGuard's pipeline, the stamp is not
+  switched off in archiGuard's `scope-config.yml` and archiGuard's `pipeline.speckit.plan.step_a` runs a `scope` stamp or
+  inventory, so the scope of `spec.md` is stamped at hand-over. Not applicable below scopeGuard 0.5.0.
+- The getting-started guide explains the stamp: where it is written, what `SCOPE CHANGED AFTER THE STAMP` means and how a
+  person re-stamps (`scopeguard stamp --reason`).
 
 ### Changed
 
@@ -63,6 +68,10 @@ release of this version pins.
   `specify extension add` or `enable` re-wires them; run `guardians configure` again afterwards.
 - The auditGuard fixture (`tests/fixtures/auditguard-config.yml`) is the 0.2.0 template; `action.yml` and the CI
   refs pin `rlgdev/spec-kit-auditguard@v0.2.0`; the catalogs and the getting-started guide name the new versions.
+- Pins: scopeGuard 0.5.0 (the scope stamp), archiGuard 0.1.2 (stamps in plan step A, keeps the agent away from the stamp
+  file, accepts scopeGuard `<0.6`), auditGuard 0.2.0 (the light profile), archiguard-templates 0.1.2. The constants
+  Guardians assumes for the siblings follow (`ARCHIGUARD_SCOPE_RANGE`, `ARCHIGUARD_READONLY`); the test fixtures are
+  the siblings' templates at those versions.
 
 ### Fixed
 

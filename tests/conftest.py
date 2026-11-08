@@ -317,7 +317,7 @@ def make_project(root: Path, aligned: bool, siblings: Iterable[str] = ("scopegua
         if "scopeguard" in siblings:
             project.replace("scopeguard", "integration: inline", "integration: embedded")
         if "archiguard" in siblings:
-            project.replace("archiguard", '"specs/*/gates/**/*.json"]', '"specs/*/gates/**/*.json", "audit/**", ".specify/extensions/auditguard/**"]')
+            project.replace("archiguard", '"specs/*/scopeguard-stamp.json"]', '"specs/*/scopeguard-stamp.json", "audit/**", ".specify/extensions/auditguard/**"]')
     else:
         project.write(".specify/extensions.yml", registry_text(all_enabled, default_priority, siblings))
     if codeowners:
