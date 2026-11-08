@@ -27,7 +27,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.9", "3.13"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
@@ -60,7 +60,7 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
@@ -84,7 +84,7 @@ jobs:
     name: family consistency (the four repositories agree)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
@@ -110,7 +110,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: bash launcher
         shell: bash
         run: |
@@ -134,7 +134,7 @@ jobs:
       matrix:
         speckit: ["specify-cli", "specify-cli==1.0.3"]   # 1.0.3: the bundle's floor
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -145,7 +145,7 @@ jobs:
     name: Spec Kit 1.0.2 refuses the bundle (floor 1.0.3)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -166,7 +166,7 @@ jobs:
     name: GitHub Action self-test (guardians verify)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
