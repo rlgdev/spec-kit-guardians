@@ -38,6 +38,13 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def read_raw(path: Path) -> str:
+    """The text with its own line endings (no newline translation): what the line edits read, so a file that uses
+    CRLF (Spec Kit writes .specify/extensions.yml with the platform's ending) is written back with CRLF."""
+    with open(path, encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
 def write_text(path: Path, text: str) -> None:
     """Write UTF-8 and keep the text's own line endings (newline='' disables translation)."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,10 +52,14 @@ def write_text(path: Path, text: str) -> None:
         handle.write(text)
 
 
+def eol_of(text: str) -> str:
+    """The line ending most lines of the text use: CRLF or LF (LF on a tie)."""
+    return "\r\n" if 2 * text.count("\r\n") > text.count("\n") else "\n"
+
+
 def split_lines(text: str) -> Tuple[List[str], str]:
-    """Lines without their endings, plus the ending to put back (CRLF when the file uses it)."""
-    eol = "\r\n" if "\r\n" in text else "\n"
-    return text.replace("\r\n", "\n").split("\n"), eol
+    """Lines without their endings, plus the ending to put back (the one most lines use)."""
+    return text.replace("\r\n", "\n").split("\n"), eol_of(text)
 
 
 def join_lines(lines: Sequence[str], eol: str) -> str:

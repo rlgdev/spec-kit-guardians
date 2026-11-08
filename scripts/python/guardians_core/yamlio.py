@@ -103,6 +103,8 @@ def _reader() -> Reader:
 
 
 def loads(text: str, where: str = "<yaml>") -> Any:
+    if text.startswith("\ufeff"):
+        text = text[1:]          # a byte-order mark (PowerShell 5 writes one); PyYAML skips it, a sibling reader may not
     return _normalise(_reader()(text, where))
 
 

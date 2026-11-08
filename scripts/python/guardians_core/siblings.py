@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from . import yamlio
 from .common import EXTENSIONS_YML, GUARDIANS, PRESETS, SIBLINGS, GuardiansError, read_text, rel, run
+from .speckit import handlers
 
 # What the siblings assume when a key is missing from their config (their config templates, at the pins).
 ARCHIGUARD_READONLY = [".specify/standards/**", ".specify/archiguard/**", ".specify/extensions/archiguard/**",
@@ -49,6 +50,16 @@ class Sibling:
             except GuardiansError:
                 self._version = "?"
         return self._version
+
+    def event_handlers(self) -> List[Tuple[str, str]]:
+        """(event, command) of the agent events its manifest declares (`events:`), which Spec Kit wires into the agent."""
+        try:
+            events = yamlio.get(yamlio.load_file(self.manifest), "events", default={}) if self.installed else {}
+        except GuardiansError:
+            return []
+        if not isinstance(events, dict):
+            return []
+        return [(str(event), str(h["command"])) for event, raw in events.items() for h in handlers(raw) if h.get("command")]
 
     def config(self) -> Dict[str, Any]:
         """The committed config file (not the workstation overrides - those show in status())."""
@@ -161,6 +172,29 @@ class Project:
     @property
     def installed(self) -> List[str]:
         return [ext for ext in GUARDIANS if self.siblings[ext].installed]
+
+    def extension_enabled(self, ext_id: str) -> bool:
+        """Spec Kit's registry flag (`specify extension disable` clears it); an extension it does not track counts as
+        enabled, as Spec Kit's event refresh counts it."""
+        data = None
+        path = self.root / ".specify" / "extensions" / ".registry"
+        if path.is_file():
+            try:
+                data = json.loads(read_text(path))
+            except (OSError, ValueError):
+                data = None
+        entry = data.get("extensions", {}).get(ext_id) if isinstance(data, dict) and isinstance(data.get("extensions"), dict) else None
+        return not (isinstance(entry, dict) and entry.get("enabled") is False)
+
+    def declared_events(self) -> Dict[str, List[Tuple[str, str]]]:
+        """Installed, enabled Guardians -> (event, command) of their agent events (archiGuard and auditGuard declare some)."""
+        out: Dict[str, List[Tuple[str, str]]] = {}
+        for ext in SIBLINGS:
+            sib = self.sibling(ext)
+            pairs = sib.event_handlers() if sib.installed and self.extension_enabled(ext) else []
+            if pairs:
+                out[ext] = pairs
+        return out
 
     def preset_installed(self, preset_id: str) -> bool:
         return (self.root / ".specify" / "presets" / preset_id).is_dir()
