@@ -37,3 +37,4 @@ checks:
   modes_agree: warn                # scopeGuard mode == archiGuard mode
   gitattributes: warn              # auditGuard's .gitattributes lines are present
   codeowners: warn                 # CODEOWNERS (when present) names owners for audit/, standards, archiguard, extensions
+  loop_feedback_recorded: warn     # auditGuard records the loop feedback archiGuard writes after coding

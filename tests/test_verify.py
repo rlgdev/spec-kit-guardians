@@ -264,9 +264,28 @@ def test_versions_in_range(aligned: FakeProject):
     check = next(c for c in verify(aligned).checks if c.id == "versions_in_range")
     assert check.status == "fail" and f"does not accept scopeGuard {VERSIONS['scopeguard']}" in check.message
     aligned.replace("archiguard", 'version: ">=0.6.0,<0.7"', 'version: ">=0.3.0,<0.6"')
-    aligned.replace("auditguard", 'version: ">=0.1,<0.3"', 'version: ">=0.2,<0.3"')
+    aligned.replace("auditguard", 'version: ">=0.1,<0.4"', 'version: ">=0.1,<0.3"')
     check = next(c for c in verify(aligned).checks if c.id == "versions_in_range")
     assert check.status == "fail" and "collectors.archiguard.version" in check.message
+
+
+def test_loop_feedback_recorded(aligned: FakeProject):
+    check = next(c for c in verify(aligned).checks if c.id == "loop_feedback_recorded")
+    assert check.status == "ok" and "auditGuard records it" in check.message
+    aligned.replace("auditguard", "    feedback: true ", "    feedback: false ")
+    check = next(c for c in verify(aligned).checks if c.id == "loop_feedback_recorded")
+    assert check.status == "warn" and "collectors.archiguard.feedback: false" in check.message
+    assert "collectors.archiguard.feedback: true" in check.fix
+    aligned.replace("archiguard", "feedback:\n  enabled: true", "feedback:\n  enabled: false")
+    assert status_of(verify(aligned), "loop_feedback_recorded") == "na"
+
+
+def test_loop_feedback_needs_auditguard_0_3(aligned: FakeProject):
+    manifest = aligned.root / ".specify/extensions/auditguard/extension.yml"
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace(f'version: "{VERSIONS["auditguard"]}"', 'version: "0.2.0"'),
+                        encoding="utf-8")
+    check = next(c for c in verify(aligned).checks if c.id == "loop_feedback_recorded")
+    assert check.status == "warn" and "auditGuard 0.2.0 does not record it" in check.message
 
 
 def test_scopeguard_embedded(aligned: FakeProject):

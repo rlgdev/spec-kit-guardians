@@ -263,7 +263,7 @@ def check_scopeguard_embedded(project: Project, c: Check) -> Check:
 
 
 def check_scope_stamp(project: Project, c: Check) -> Check:
-    """The family default since scopeGuard 0.5 / archiGuard 0.1.2: the scope of spec.md is stamped at hand-over."""
+    """The family default since scopeGuard 0.5 / archiGuard 0.3: the scope of spec.md is stamped at hand-over."""
     sg, ag = project.sibling("scopeguard"), project.sibling("archiguard")
     if not (sg.installed and ag.installed):
         return c.na("needs scopeGuard and archiGuard")
@@ -488,6 +488,29 @@ def check_codeowners(project: Project, c: Check) -> Check:
     return c.ok(f"{rel(path, project.root)} covers {', '.join(needed)}")
 
 
+LOOP_FEEDBACK_ARCHIGUARD = ">=0.3.0"   # the first archiGuard that writes gates/loop-feedback.json (0.2.0 is `show`)
+LOOP_FEEDBACK_AUDITGUARD = ">=0.3.0"   # the first auditGuard that records, triages and hands it over
+
+
+def check_loop_feedback_recorded(project: Project, c: Check) -> Check:
+    """archiGuard writes the loop feedback to the domain master design; auditGuard must record it (evidence)."""
+    ag, au = project.sibling("archiguard"), project.sibling("auditguard")
+    if not (ag.installed and au.installed):
+        return c.na("needs archiGuard and auditGuard")
+    if not version_satisfies(ag.version or "0", LOOP_FEEDBACK_ARCHIGUARD):
+        return c.na(f"archiGuard {ag.version} writes no loop feedback (0.3.0 or newer does)")
+    if ag.get("feedback", "enabled", default=True) is False:
+        return c.na(f"the loop feedback is switched off in archiGuard ({_cfg_path(ag)} feedback.enabled)")
+    if not version_satisfies(au.version or "0", LOOP_FEEDBACK_AUDITGUARD):
+        return c.problem(f"archiGuard {ag.version} writes the loop feedback, but auditGuard {au.version} does not record it",
+                         "upgrade auditGuard to 0.3.0 or newer (the Guardians bundle pins a tested version)")
+    if au.get("collectors", "archiguard", "feedback", default=True) is False:
+        return c.problem("archiGuard writes the loop feedback, but auditGuard does not record it "
+                         "(collectors.archiguard.feedback: false)",
+                         f"{_cfg_path(au)} collectors.archiguard.feedback: true")
+    return c.ok("archiGuard writes the loop feedback after coding; auditGuard records it for triage and the backlog")
+
+
 CHECK_FUNCTIONS = {
     "installed": check_installed,
     "catalogs_keep_defaults": check_catalogs_keep_defaults,
@@ -504,6 +527,7 @@ CHECK_FUNCTIONS = {
     "modes_agree": check_modes_agree,
     "gitattributes": check_gitattributes,
     "codeowners": check_codeowners,
+    "loop_feedback_recorded": check_loop_feedback_recorded,
 }
 assert set(CHECK_FUNCTIONS) == set(CHECKS)
 

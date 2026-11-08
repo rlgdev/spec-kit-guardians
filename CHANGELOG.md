@@ -41,6 +41,10 @@ release of this version pins.
   inventory, so the scope of `spec.md` is stamped at hand-over. Not applicable below scopeGuard 0.5.0.
 - The getting-started guide explains the stamp: where it is written, what `SCOPE CHANGED AFTER THE STAMP` means and how a
   person re-stamps (`scopeguard stamp --reason`).
+- `guardians verify` check `loop_feedback_recorded` (warn): `[OK]` when auditGuard records the feedback archiGuard
+  writes. `[WARN]` when auditGuard is older than 0.3.0 or has `collectors.archiguard.feedback: false`. `[--]` when the
+  feedback is switched off or archiGuard is older than 0.2.0.
+- Getting started: *After coding: the loop feedback* (when it is shown, who it is for, the triage commands).
 
 ### Changed
 
@@ -72,6 +76,8 @@ release of this version pins.
   file, accepts scopeGuard `<0.6`), auditGuard 0.2.0 (the light profile), archiguard-templates 0.1.2. The constants
   Guardians assumes for the siblings follow (`ARCHIGUARD_SCOPE_RANGE`, `ARCHIGUARD_READONLY`); the test fixtures are
   the siblings' templates at those versions.
+- The bundle pins archiGuard 0.2.0, the archiguard-templates preset 0.2.0 and auditGuard 0.3.0. The catalogs, the
+  action, the CI refs and the test fixtures follow them.
 
 ### Fixed
 
