@@ -15,7 +15,7 @@ env:
   # main (the family job and the e2e say so); the action self-test is skipped instead, GitHub must resolve its `uses:` tags
   SCOPEGUARD_REF: v0.4.1
   ARCHIGUARD_REF: v0.1.1
-  AUDITGUARD_REF: v0.1.0
+  AUDITGUARD_REF: v0.2.0
 
 jobs:
   test:

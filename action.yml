@@ -55,7 +55,7 @@ runs:
 
     - name: auditGuard
       if: ${{ inputs.auditguard == 'true' }}
-      uses: rlgdev/spec-kit-auditguard@v0.1.0
+      uses: rlgdev/spec-kit-auditguard@v0.2.0
       with:
         command: verify
         golden: ${{ inputs.auditguard-golden }}
