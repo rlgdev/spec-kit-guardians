@@ -123,10 +123,11 @@ bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
 
 What it does, in this order: sets scopeGuard to `integration: embedded` (archiGuard runs the scope gate), adds
 the audit trail to archiGuard's edit guard, adds Spec Kit's catalogs back if a catalog file lists only the
-Guardians', runs the three tools' own `configure` commands, has Spec Kit wire the agent events that
-`specify bundle install` leaves out (archiGuard's edit guard, auditGuard's guard and session records: it runs
-`specify extension disable guardians, then specify extension enable guardians`), orders the hooks so auditGuard
-records first and last, and prints the alignment report. **Expected ending:**
+Guardians', has Spec Kit wire the agent events that `specify bundle install` leaves out (archiGuard's edit guard;
+it runs `specify extension disable guardians, then specify extension enable guardians`), runs the three tools' own
+`configure` commands (auditGuard's unwires its guard and session records again: its default `light` profile
+switches them off; `profile: full` keeps them), orders the hooks so auditGuard records first and last, and prints
+the alignment report. **Expected ending:**
 
 ```text
   RESULT: OK | 15 ok, 0 warnings, 0 failures
@@ -149,7 +150,7 @@ If the result is not `OK`:
 | `[WARN] gitattributes               .gitattributes lacks 3 auditGuard line(s): ...` | auditGuard's hash chain needs its files excluded from line-ending conversion | `bash .specify/extensions/auditguard/scripts/bash/auditguard.sh configure` writes the lines |
 | `NOTE: .specify/extensions/<tool>/<tool>-config.yml not found: copy ... to ..., then run guardians configure again` | the tool's config file is missing: deleted, or installed by a `bundle install` on Spec Kit 1.0.1 / 1.0.2, which do not create it (Guardians needs 1.0.3 for that reason) | make the copy the note names (the template is the tool's own default config), run `configure` again |
 | `[WARN] catalogs_keep_defaults      .specify/extension-catalogs.yml replaces Spec Kit's extension catalogs and lacks default, community: ...` | the catalog file hides every other extension from search, info and update | when the file lists only the Guardians catalog, `configure` already added Spec Kit's two back; otherwise run the `fix:` commands (or add your `~/.specify/` catalogs to the file) |
-| `[WARN] agent_events_wired          the agent events of archiGuard, auditGuard are not wired for claude (...)` or `NOTE: the agent events of ... are not wired (specify is not on PATH): run ...` | Spec Kit has not written the edit guard and the audit guard into your agent's settings (a bundle install does not) | `specify extension disable guardians, then specify extension enable guardians`, then `configure` again |
+| `[WARN] agent_events_wired          the agent events of archiGuard are not wired for claude (...)` or `NOTE: the agent events of ... are not wired (specify is not on PATH): run ...` | Spec Kit has not written the edit guard and the audit guard into your agent's settings (a bundle install does not) | `specify extension disable guardians, then specify extension enable guardians`, then `configure` again |
 | `ERROR: <tool> configure failed (exit N); nothing after it ran` (Guardians exits 2) | one tool's own `configure` refused with exit N (usually a bad value in its config file, or an unknown key: all three reject those) | the tool's own message is indented under the `<tool> : configure exited N` line just above; fix what it names, run `configure` again |
 
 Then commit:

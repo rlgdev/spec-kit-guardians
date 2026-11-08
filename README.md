@@ -106,7 +106,7 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
   Changed:
     .specify/extensions/scopeguard/scopeguard-config.yml: integration: inline -> embedded (archiGuard runs the scope gate)
     .specify/extensions/archiguard/archiguard-config.yml: edit_guard.always_readonly += audit/**, .specify/extensions/auditguard/**
-    agent events of archiGuard, auditGuard for claude: wired by Spec Kit (specify extension disable guardians, then specify extension enable guardians; it refreshes every enabled extension's events)
+    agent events of archiGuard for claude: wired by Spec Kit (specify extension disable guardians, then specify extension enable guardians; it refreshes every enabled extension's events)
     .specify/extensions.yml: 20 hook priorities set: auditguard after_* 10 -> 90 (10), auditguard before_* 10 -> 1 (10)
 
   Tools:
@@ -127,7 +127,7 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
     [OK]   hooks_match_integration     scopeGuard 0/5 (embedded); archiGuard 0/6 (inline); auditGuard 20/20 (hooks)
     [OK]   git_base_agrees             both use base branch main
     [OK]   edit_guard_covers_audit     archiGuard's edit guard covers audit/**, .specify/extensions/auditguard/**
-    [OK]   agent_events_wired          claude: archiGuard, auditGuard in .claude/settings.json
+    [OK]   agent_events_wired          claude: archiGuard in .claude/settings.json
     [OK]   modes_agree                 scopeGuard and archiGuard enforce; auditGuard record (records, not compared)
     [OK]   gitattributes               the audit trail is excluded from line-ending conversion
     [--]   codeowners                  no CODEOWNERS file; consider owners for audit/, .specify/standards/, ...
@@ -137,8 +137,9 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
 ```
 
 Order of work: the two config edits first (so scopeGuard's own `configure` already sees `embedded` and switches
-its hooks off) and Spec Kit's catalogs back if a catalog file lists only the family's, then the three `configure`
-commands in the configured order, then the agent events, then the hook priorities, then the report. `--dry-run`
+its hooks off) and Spec Kit's catalogs back if a catalog file lists only the family's, then the agent events (so
+auditGuard's own `configure` unwires the ones its profile switches off), then the three `configure` commands in the
+configured order, then the hook priorities, then the report. `--dry-run`
 lists every edit under `Would change:` instead of making it and passes `--dry-run` to the siblings. A second run
 changes nothing.
 
@@ -150,7 +151,10 @@ Two repairs of Spec Kit's own state, so the Guardians never cost the project its
   exactly as `specify extension catalog add` writes them. A file with any other catalog, or a project with a
   user-level catalog file in `~/.specify/`, is left alone: `verify` warns and names the commands.
 - **Agent events.** `specify bundle install` does not wire the extensions' agent events (`extension add` does), so
-  archiGuard's edit guard and auditGuard's guard and session records would never run. When they are missing for
+  archiGuard's edit guard and auditGuard's guard and session records would never run. auditGuard's events count only
+  where its configuration switches them on (`profile: full`, or `sessions.record`, `events.stop`, `guard.enabled` set):
+  its default `light` profile switches them off and its own `configure` unwires them, so Guardians leaves them
+  unwired too. When the expected events are missing for
   an integration that has them, `configure` runs `specify extension disable guardians, then specify extension enable
   guardians`: Spec Kit rewires every enabled extension's events on `enable`, and Guardians has no hooks or events
   of its own. Spec Kit rewrites `.specify/extensions.yml` then (same data, without comments, the platform's line
@@ -186,7 +190,7 @@ matters as soon as archiGuard runs through hooks.
 | `hooks_match_integration` | warn | a tool has hooks enabled although its integration is not `hooks`, or none enabled although it is |
 | `git_base_agrees` | fail | archiGuard `git.base` ≠ auditGuard `golden.git.base` - two files, a person decides |
 | `edit_guard_covers_audit` | fail | archiGuard's edit guard is off or does not list auditGuard's read-only paths |
-| `agent_events_wired` | warn | an installed integration that takes agent events (Spec Kit 1.1.1: claude, codex, copilot, cursor-agent, devin, gemini, opencode, qwen, tabnine, vibe) lacks one of archiGuard's or auditGuard's events in its settings file (each event the integration has, so the edit guard twice: before and after a tool); not checked where `--events false` or `.specify/integration-events.yml` sets them |
+| `agent_events_wired` | warn | an installed integration that takes agent events (Spec Kit 1.1.1: claude, codex, copilot, cursor-agent, devin, gemini, opencode, qwen, tabnine, vibe) lacks one of archiGuard's events, or one of auditGuard's events its configuration switches on (none in its default `light` profile), in its settings file (each event the integration has, so the edit guard twice: before and after a tool); not checked where `--events false` or `.specify/integration-events.yml` sets them |
 | `modes_agree` | warn | scopeGuard `mode` ≠ archiGuard `mode` (auditGuard's `record`/`enforce` means something else and is only shown) |
 | `gitattributes` | warn | auditGuard's three `-text` lines are missing |
 | `codeowners` | warn | a CODEOWNERS file exists but names no owner for `audit/`, `.specify/standards/`, `.specify/archiguard/` or `.specify/extensions/` |

@@ -62,7 +62,7 @@ feedback to the domain master design is recorded. `verify` has sixteen checks (w
   catalog file left as `catalogs: []`, and scopeGuard left `embedded` when it was installed before the bundle.
 - The getting-started guide: a gate that stops a command skips the other extensions' post-execution hooks; new
   rows for the two checks and their symptoms.
-- Specification amendments A12-A19 (A18 the scope stamp, A19 the loop feedback check).
+- Specification amendments A12-A20 (A18 the scope stamp, A19 the loop feedback check, A20 auditGuard's events).
 - auditGuard 0.2.0 makes its `light` profile the default: the twenty hooks still record every command, the gate
   verdicts, waivers and decisions, but no agent event runs any more (no session record, no `stop` handler, no
   `pre_tool_use` guard), scopeGuard's report is not re-run at every hook and the views are rebuilt on demand. The
@@ -84,6 +84,9 @@ feedback to the domain master design is recorded. `verify` has sixteen checks (w
 
 ### Fixed
 
+- `configure` and `agent_events_wired` expect auditGuard's agent events only where its configuration switches them on
+  (its default `light` profile switches all four off and its own `configure` unwires them); expecting all of them made
+  every `guardians configure` re-wire them, so a second run never said `No change needed.` (A20).
 - `configure` keeps the line endings of the files it edits (the one most of their lines use). Spec Kit writes
   `.specify/extensions.yml` with CRLF on Windows; rewritten with LF, `git diff` showed every hook of every other
   extension removed and added again.

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from . import yamlio
-from .common import EXTENSIONS_YML, GUARDIANS, PRESETS, SIBLINGS, GuardiansError, read_text, rel, run
+from .common import EXTENSIONS_YML, GUARDIANS, PRESETS, SIBLINGS, GuardiansError, read_text, rel, run, version_satisfies
 from .speckit import handlers
 
 # What the siblings assume when a key is missing from their config (their config templates, at the pins).
@@ -17,6 +17,12 @@ ARCHIGUARD_READONLY = [".specify/standards/**", ".specify/archiguard/**", ".spec
 ARCHIGUARD_SCOPE_RANGE = ">=0.3.0,<0.6"
 AUDITGUARD_READONLY = ["audit/**", ".specify/extensions/auditguard/**"]
 AUDITGUARD_COLLECTOR_RANGES = {"scopeguard": ">=0.4,<0.6", "archiguard": ">=0.1,<0.4"}
+# auditGuard 0.2+: which switch turns each agent event on (its EVENT_SWITCHES), and the value its profiles give every
+# switch (its PROFILES: `light`, the default, turns them all off; `full` on). A switch set in its config file wins.
+AUDITGUARD_EVENT_SWITCHES = {"session_start": ("sessions", "record"), "stop": ("events", "stop"),
+                             "session_end": ("sessions", "record"), "pre_tool_use": ("guard", "enabled")}
+AUDITGUARD_PROFILE_EVENTS = {"light": False, "full": True}
+AUDITGUARD_DEFAULT_PROFILE = "light"
 AUDITGUARD_GITATTRIBUTES = ["{audit}/**/*.jsonl -text", "{audit}/**/evidence/** -text", "{audit}/**/seal.json -text"]
 DEFAULT_INTEGRATION = {"scopeguard": "inline", "archiguard": "inline", "auditguard": "hooks"}
 DEFAULT_MODE = {"scopeguard": "enforce", "archiguard": "enforce", "auditguard": "record"}
@@ -60,6 +66,23 @@ class Sibling:
         if not isinstance(events, dict):
             return []
         return [(str(event), str(h["command"])) for event, raw in events.items() for h in handlers(raw) if h.get("command")]
+
+    def wired_events(self) -> List[Tuple[str, str]]:
+        """The agent events Spec Kit should have wired for it: every declared one, except auditGuard 0.2+'s events its
+        configuration switches off (its default `light` profile switches all four off, and its own `configure` then
+        unwires them; expecting them would make `guardians configure` re-wire them on every run)."""
+        pairs = self.event_handlers()
+        if self.id != "auditguard" or not version_satisfies(self.version or "0", ">=0.2.0"):
+            return pairs
+        profile = self.get("profile", default=AUDITGUARD_DEFAULT_PROFILE)
+        default = AUDITGUARD_PROFILE_EVENTS.get(str(profile), AUDITGUARD_PROFILE_EVENTS[AUDITGUARD_DEFAULT_PROFILE])
+        def on(event: str) -> bool:
+            keys = AUDITGUARD_EVENT_SWITCHES.get(event)
+            if keys is None:
+                return True
+            value = self.get(*keys)
+            return default if value is None else value is True or str(value).lower() in ("true", "yes", "on")
+        return [(event, command) for event, command in pairs if on(event)]
 
     def config(self) -> Dict[str, Any]:
         """The committed config file (not the workstation overrides - those show in status())."""
@@ -191,7 +214,7 @@ class Project:
         out: Dict[str, List[Tuple[str, str]]] = {}
         for ext in SIBLINGS:
             sib = self.sibling(ext)
-            pairs = sib.event_handlers() if sib.installed and self.extension_enabled(ext) else []
+            pairs = sib.wired_events() if sib.installed and self.extension_enabled(ext) else []
             if pairs:
                 out[ext] = pairs
         return out

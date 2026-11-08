@@ -98,7 +98,7 @@ contains "[FAIL] edit_guard_covers_audit"
 contains "[OK]   installed"
 contains "[OK]   versions_in_range"
 contains "[WARN] catalogs_keep_defaults      .specify/extension-catalogs.yml replaces Spec Kit's extension catalogs and lacks default, community"
-contains "[WARN] agent_events_wired          the agent events of archiGuard, auditGuard are not wired for claude (.claude/settings.json)"
+contains "[WARN] agent_events_wired          the agent events of archiGuard are not wired for claude (.claude/settings.json)"
 git add -A >/dev/null 2>&1 && git commit -qm "fresh install" >/dev/null
 
 echo "== configure"
@@ -108,12 +108,13 @@ contains "archiguard-config.yml: edit_guard.always_readonly += audit/**, .specif
 contains "extensions.yml: 20 hook priorities set"
 contains ".specify/extension-catalogs.yml: catalogs += default (priority 1), community (priority 20)"
 contains ".specify/preset-catalogs.yml: catalogs += default (priority 1), community (priority 20)"
-contains "agent events of archiGuard, auditGuard for claude: wired by Spec Kit (specify extension disable guardians, then specify extension enable guardians; it refreshes every enabled extension's events)"
+contains "agent events of archiGuard for claude: wired by Spec Kit (specify extension disable guardians, then specify extension enable guardians; it refreshes every enabled extension's events)"
 contains "[OK]   catalogs_keep_defaults"
 contains "[OK]   agent_events_wired"
 contains "RESULT: OK"
 grep -q "speckit.archiguard.editguard" .claude/settings.json || fail "the edit guard is not wired after configure"
-grep -q "speckit.auditguard.guard" .claude/settings.json || fail "the audit guard is not wired after configure"
+# auditGuard's default `light` profile switches its agent events off: its configure (after the wiring) unwires them
+grep -q "speckit.auditguard" .claude/settings.json && fail "auditGuard's agent events are wired after configure, though its light profile switches them off"
 expect 0 specify extension list
 contains "git"
 [[ "$(grep -c "extension: git" .specify/extensions.yml)" == "$git_hooks_before" ]] || fail "the git extension's hooks changed"

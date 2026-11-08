@@ -276,13 +276,15 @@ def run_configure(project: Project, cfg: Config, dry_run: bool, siblings: bool, 
         wire_edit_guard(project, outcome, dry_run)
         keep_speckit_catalogs(project, cfg, outcome, dry_run)
         project.reset()
+        # before the siblings' configure: Spec Kit's refresh wires every declared event, and auditGuard's configure then
+        # unwires the ones its profile switches off (its default `light` profile: all four) in the same run
+        wire_agent_events(project, cfg, outcome, dry_run)
+        project.reset()
         if siblings:
             outcome.lines.append("  Siblings:")
             run_siblings(project, cfg, outcome, dry_run, verbose)
             outcome.lines.append("")
             project.reset()
-        wire_agent_events(project, cfg, outcome, dry_run)
-        project.reset()
         order_hooks(project, cfg, outcome, dry_run)
         project.reset()
     except GuardiansError as exc:

@@ -152,6 +152,9 @@ def test_catalogs_a_discovery_only_default_and_files_spec_kit_refuses(aligned: F
 
 
 def test_agent_events_wired(aligned: FakeProject, fresh: FakeProject):
+    # auditGuard's `full` profile wires its agent events, so they are expected (the `light` default: see below)
+    for project in (aligned, fresh):
+        project.replace("auditguard", "profile: light", "profile: full")
     check = check_of(aligned, "agent_events_wired")
     assert check.status == "ok" and check.message == "claude: archiGuard, auditGuard in .claude/settings.json"
     check = check_of(fresh, "agent_events_wired")
@@ -471,3 +474,23 @@ def test_config_hint_follows_the_declared_template(fresh: FakeProject):
         'provides:\n  commands: []\n  config:\n    - { name: "scopeguard-config.yml", template: "templates/sg.yml" }\n'), encoding="utf-8")
     hint = Project(fresh.root).sibling("scopeguard").config_hint()
     assert hint == "copy .specify/extensions/scopeguard/templates/sg.yml to .specify/extensions/scopeguard/scopeguard-config.yml"
+
+
+def test_agent_events_follow_auditguards_profile(aligned: FakeProject):
+    """auditGuard 0.2+'s default `light` profile switches its agent events off (its configure unwires them), so only
+    archiGuard's are expected; `full` expects all four; a switch set in auditGuard's config wins over the profile."""
+    aligned.write(".claude/settings.json", claude_settings(c for _e, c in EVENTS["archiguard"]))
+    check = check_of(aligned, "agent_events_wired")
+    assert check.status == "ok" and check.message == "claude: archiGuard in .claude/settings.json"
+    aligned.replace("auditguard", "profile: light", "profile: full")
+    check = check_of(aligned, "agent_events_wired")
+    assert check.status == "warn" and check.message.startswith("the agent events of auditGuard are not wired for claude")
+    aligned.replace("auditguard", "profile: full", "profile: light")
+    aligned.replace("auditguard", "\nguard:\n  # enabled: false", "\nguard:\n  enabled: true\n  # enabled: false")
+    events = dict(aligned_project_events(aligned)["auditguard"])
+    assert list(events) == ["pre_tool_use"]
+
+
+def aligned_project_events(project: FakeProject):
+    from guardians_core.siblings import Project
+    return Project(project.root).declared_events()

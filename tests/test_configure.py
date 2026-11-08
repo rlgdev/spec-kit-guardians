@@ -228,7 +228,7 @@ def test_agent_events_are_wired_through_spec_kit(fresh: FakeProject):
     code, out = run(fresh)
     assert code == 0, out
     assert fresh.specify_calls() == ["extension disable guardians", "extension enable guardians"]
-    assert (f"agent events of archiGuard, auditGuard for claude: wired by Spec Kit ({WIRE}; it refreshes every enabled "
+    assert (f"agent events of archiGuard for claude: wired by Spec Kit ({WIRE}; it refreshes every enabled "
             "extension's events)") in out
     settings = fresh.path(".claude/settings.json").read_text(encoding="utf-8")
     assert "speckit.archiguard.editguard" in settings and "speckit.auditguard.guard" in settings
@@ -240,14 +240,14 @@ def test_agent_events_are_wired_through_spec_kit(fresh: FakeProject):
 def test_agent_events_dry_run_calls_nothing(fresh: FakeProject):
     code, out = run(fresh, "--dry-run")
     assert fresh.specify_calls() == []
-    assert f"agent events of archiGuard, auditGuard for claude: {WIRE} (Spec Kit wires them)" in out
+    assert f"agent events of archiGuard for claude: {WIRE} (Spec Kit wires them)" in out
 
 
 def test_agent_events_without_specify_or_when_guardians_is_disabled(fresh: FakeProject, monkeypatch):
     from guardians_core import speckit
     monkeypatch.setattr(speckit, "specify_command", lambda: None)
     code, out = run(fresh)
-    assert code == 0 and (f"NOTE: the agent events of archiGuard, auditGuard for claude are not wired (specify is not on "
+    assert code == 0 and (f"NOTE: the agent events of archiGuard for claude are not wired (specify is not on "
                           f"PATH): run {WIRE}") in out
     assert "[WARN] agent_events_wired" in out
 
@@ -291,7 +291,7 @@ def test_agent_events_a_late_disable_failure_does_not_leave_guardians_disabled(f
 def test_agent_events_spec_kit_did_not_wire_is_not_a_change(fresh: FakeProject):
     fresh.write(".specify/SPECIFY_NOWIRE", "")                       # a Spec Kit whose event refresh fails
     code, out = run(fresh)
-    assert ("NOTE: Spec Kit did not wire the agent events of archiGuard, auditGuard for claude (it said: Warning: event "
+    assert ("NOTE: Spec Kit did not wire the agent events of archiGuard for claude (it said: Warning: event "
             "refresh failed for 1 integration(s)) - see agent_events_wired below") in out
     assert "wired by Spec Kit" not in out and "[WARN] agent_events_wired" in out
 
@@ -317,10 +317,10 @@ def test_agent_events_spec_kit_cannot_merge_into_a_jsonc_settings_file(fresh: Fa
     for _run in range(2):                                             # no toggle, so nothing repeats on every run
         code, out = run(fresh)
         assert code == 0 and fresh.specify_calls() == []
-        assert ("NOTE: the agent events of archiGuard, auditGuard for claude are not wired: Spec Kit cannot add them to "
+        assert ("NOTE: the agent events of archiGuard for claude are not wired: Spec Kit cannot add them to "
                 ".claude/settings.json (not plain JSON, for example comments); make it plain JSON") in out
     data = json.loads(run(fresh, "--json")[1])
-    assert any(n.startswith("the agent events of archiGuard, auditGuard for claude are not wired") for n in data["notes"])
+    assert any(n.startswith("the agent events of archiGuard for claude are not wired") for n in data["notes"])
 
 
 def test_agent_events_toggle_keeps_the_registry_bytes(fresh: FakeProject):
