@@ -69,7 +69,7 @@ every extension the project had before; `specify preset list` shows `archiguard-
   are only hidden: `guardians configure` (step 2) adds the two catalogs back.
 
 > **Download fails?** The bundle resolves its components through the GitHub release assets of the pinned versions
-> (scopeGuard `v0.4.1`, archiGuard `v0.2.0`, auditGuard `v0.3.0`, Guardians `v0.2.0`). Where GitHub is not
+> (scopeGuard `v0.5.0`, archiGuard `v0.3.0`, auditGuard `v0.3.0`, Guardians `v0.2.0`). Where GitHub is not
 > reachable, use path B's checkout variant (`--dev`); the result is identical.
 
 ### Path B: one extension at a time
@@ -77,9 +77,9 @@ every extension the project had before; `specify preset list` shows `archiguard-
 From the release assets:
 
 ```bash
-specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
-specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.2.0/archiguard.zip
-specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.2.0/archiguard-preset.zip
+specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.5.0/scopeguard.zip
+specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.3.0/archiguard.zip
+specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.3.0/archiguard-preset.zip
 specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.3.0/auditguard.zip
 specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.2.0/guardians.zip
 ```
@@ -263,7 +263,7 @@ Use Spec Kit as before. What changes:
 - A command a gate stops (an escalation, or `cannot evaluate`) ends there: its post-execution hooks do not run,
   also those of other extensions (git's commit, agent-context's update); they run when the command is run again
   and passes. With the default setup (the gates inline) the gate's output lists them under `NOT RUN` and the agent
-  tells you (scopeGuard after 0.4.1, archiGuard after 0.1.1). In a new project this is the first `/speckit.plan`:
+  tells you (scopeGuard since 0.5.0, archiGuard since 0.2.0). In a new project this is the first `/speckit.plan`:
   it stops at step A until the standards lock (3.1) and the feature's handover record exist.
 
 The commands reserved for **people** (the agent is blocked from them, and that is the point):
@@ -352,8 +352,8 @@ auditGuard's verify (chains, seals, evidence, the golden sources) and `guardians
 to the job summary. Each part can be switched off with `scopeguard: "false"` and so on. Make the job a required
 check on the protected branch.
 
-To compose the job yourself instead, use the three siblings' actions directly (`rlgdev/spec-kit-scopeguard@v0.4.1`,
-`rlgdev/spec-kit-archiguard@v0.2.0`, `rlgdev/spec-kit-auditguard@v0.3.0`) and add one step:
+To compose the job yourself instead, use the three siblings' actions directly (`rlgdev/spec-kit-scopeguard@v0.5.0`,
+`rlgdev/spec-kit-archiguard@v0.3.0`, `rlgdev/spec-kit-auditguard@v0.3.0`) and add one step:
 
 ```yaml
       - run: python .specify/extensions/guardians/scripts/python/guardians.py verify
@@ -413,7 +413,7 @@ and `AUDITGUARD_ACTOR` still apply); scopeGuard applies `local-config.yml` and `
 | `guardians verify` exits `2` with `cannot read YAML` | no PyYAML and no sibling installed | `python -m pip install pyyaml`, or run with specify-cli's Python (`GUARDIANS_PYTHON`) |
 | `specify extension search` finds only the Guardians; `specify extension info git` says `Not found in catalog`; `specify extension update` skips your other extensions | a catalog file in `.specify/` replaces Spec Kit's catalogs (step 1 without its Spec Kit lines); nothing was uninstalled | `guardians configure` adds them back, or run the two Spec Kit lines of step 1 for extensions and presets |
 | an agent edits a signed plan or `audit/` unhindered; no session records in `audit/` | the agent events are not wired (a bundle install does not wire them) | `guardians configure` (`[WARN] agent_events_wired` says it), or `specify extension disable guardians, then specify extension enable guardians` |
-| git's commit (or another extension's `after_plan` hook) did not run after `/speckit.plan` | a gate stopped the command (archiGuard after 0.1.1 and scopeGuard after 0.4.1 list the skipped hooks under `NOT RUN`) | resolve what the gate names and run the command again |
+| git's commit (or another extension's `after_plan` hook) did not run after `/speckit.plan` | a gate stopped the command (archiGuard since 0.2.0 and scopeGuard since 0.5.0 list the skipped hooks under `NOT RUN`) | resolve what the gate names and run the command again |
 | a reinstall turned hooks back on | a sibling's reinstall registers its manifest hooks and priorities | `guardians configure` re-applies everything; it is idempotent |
 
 ---
@@ -444,12 +444,12 @@ specify bundle catalog remove https://raw.githubusercontent.com/rlgdev/spec-kit-
 - Installed with path B? Remove the preset **first** (`specify preset remove archiguard-templates`), then the
   four extensions (`specify extension remove guardians`, `auditguard`, `archiguard`, `scopeguard`; `extension
   remove` takes their agent events along). A preset left behind keeps wrapping `/speckit.plan`, `/speckit.tasks`,
-  `/speckit.implement` and `/speckit.analyze`; they then fail at the missing runner (archiGuard's preset after
-  0.1.1 reports `archiGuard not installed - skipped` and goes on).
+  `/speckit.implement` and `/speckit.analyze`; they then fail at the missing runner (archiGuard's preset since
+  0.2.0 reports `archiGuard not installed - skipped` and goes on).
 - `catalogs: []` left in `.specify/extension-catalogs.yml` (it had no other entry) makes Spec Kit's extension
   search, update and catalog list fail: delete the file, and Spec Kit uses its own catalogs again.
 - scopeGuard was installed before the bundle, so the bundle leaves it? Guardians set it to `integration: embedded`,
-  which runs only inside archiGuard (scopeGuard after 0.4.1 warns so): set `integration: inline` in
+  which runs only inside archiGuard (scopeGuard since 0.5.0 warns so): set `integration: inline` in
   `.specify/extensions/scopeguard/scopeguard-config.yml`, add its preset (`specify preset add --from
   https://github.com/rlgdev/spec-kit-scopeguard/releases/latest/download/scopeguard-preset.zip`) and run
   `bash .specify/extensions/scopeguard/scripts/bash/scopeguard.sh configure`.

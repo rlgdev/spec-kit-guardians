@@ -7,10 +7,14 @@ versions; the pins are listed with every release.
 
 ## [Unreleased]
 
-Keeps the project's other Spec Kit extensions working next to the Guardians. Pins unchanged; the `NOT RUN` lines,
-the presets' missing-engine skip, scopeGuard's embedded warning and the siblings' own line-ending fix described in
-the guides come with the sibling releases after scopeGuard 0.4.1, archiGuard 0.1.1 and auditGuard 0.1.0, which the
-release of this version pins.
+## [0.2.0] - 2026-11-08
+
+Pins: **scopeGuard 0.5.0** (was 0.4.1) · **archiGuard 0.3.0** (was 0.1.1) · **auditGuard 0.3.0** (was 0.1.0) ·
+**archiguard-templates 0.3.0** (was 0.1.1).
+
+Three lines of work that were planned as separate releases (0.1.3 and 0.2.0) ship together: the bundle keeps the
+project's other Spec Kit extensions working, pins the scope stamp and the light profile, and checks that the loop
+feedback to the domain master design is recorded. `verify` has sixteen checks (was twelve).
 
 ### Added
 
@@ -58,7 +62,7 @@ release of this version pins.
   catalog file left as `catalogs: []`, and scopeGuard left `embedded` when it was installed before the bundle.
 - The getting-started guide: a gate that stops a command skips the other extensions' post-execution hooks; new
   rows for the two checks and their symptoms.
-- Specification amendments A12-A17.
+- Specification amendments A12-A19 (A18 the scope stamp, A19 the loop feedback check).
 - auditGuard 0.2.0 makes its `light` profile the default: the twenty hooks still record every command, the gate
   verdicts, waivers and decisions, but no agent event runs any more (no session record, no `stop` handler, no
   `pre_tool_use` guard), scopeGuard's report is not re-run at every hook and the views are rebuilt on demand. The
@@ -70,14 +74,13 @@ release of this version pins.
 - `guardians configure` calls `auditguard configure` as before; in the light profile that call also removes
   auditGuard's switched-off events from the agent's hook config (Claude Code `.claude/settings.json`). A later
   `specify extension add` or `enable` re-wires them; run `guardians configure` again afterwards.
-- The auditGuard fixture (`tests/fixtures/auditguard-config.yml`) is the 0.2.0 template; `action.yml` and the CI
-  refs pin `rlgdev/spec-kit-auditguard@v0.2.0`; the catalogs and the getting-started guide name the new versions.
-- Pins: scopeGuard 0.5.0 (the scope stamp), archiGuard 0.1.2 (stamps in plan step A, keeps the agent away from the stamp
-  file, accepts scopeGuard `<0.6`), auditGuard 0.2.0 (the light profile), archiguard-templates 0.1.2. The constants
-  Guardians assumes for the siblings follow (`ARCHIGUARD_SCOPE_RANGE`, `ARCHIGUARD_READONLY`); the test fixtures are
-  the siblings' templates at those versions.
-- The bundle pins archiGuard 0.2.0, the archiguard-templates preset 0.2.0 and auditGuard 0.3.0. The catalogs, the
-  action, the CI refs and the test fixtures follow them.
+- Pins: scopeGuard 0.5.0 (the scope stamp, the embedded warning), archiGuard 0.3.0 (`archiguard show`, stamps in
+  plan step A, keeps the agent away from the stamp file, accepts scopeGuard `<0.6`, the loop feedback),
+  auditGuard 0.3.0 (the light profile of 0.2.0, records the stamp and the loop feedback, accepts archiGuard `<0.4`),
+  archiguard-templates 0.3.0. The catalogs, the action, the CI refs, the constants Guardians assumes for the siblings
+  (`ARCHIGUARD_SCOPE_RANGE`, `ARCHIGUARD_READONLY`, `AUDITGUARD_COLLECTOR_RANGES`) and the test fixtures (the
+  siblings' templates at those versions) follow them. `loop_feedback_recorded` expects the feedback from archiGuard
+  0.3.0 on (it was planned as 0.2.0, the number `archiguard show` took).
 
 ### Fixed
 

@@ -37,7 +37,7 @@ provides:
     # archiGuard's default integration is inline: the preset makes the gates steps of /speckit.plan, /speckit.tasks
     # and /speckit.implement and adds the Architecture Conformance / Scope Coverage / Fitness sections to the templates.
     # `strategy` is required by the bundle schema; the preset's own per-entry strategies apply at install.
-    - { id: "archiguard-templates", version: "0.2.0", priority: 10, strategy: "wrap" }
+    - { id: "archiguard-templates", version: "0.3.0", priority: 10, strategy: "wrap" }
   # No scopeguard-templates (archiGuard wraps the commands and runs the scope gate itself) and no workflows
   # (scopeguard-sdd / archiguard-sdd are for integration: workflow; add them by hand when you use it).
 

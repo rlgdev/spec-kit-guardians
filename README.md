@@ -65,9 +65,9 @@ prints what is still missing. `specify bundle info guardians` shows the exact co
 <summary>Without the bundle (one extension at a time)</summary>
 
 ```bash
-specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.4.1/scopeguard.zip
-specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.2.0/archiguard.zip
-specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.2.0/archiguard-preset.zip
+specify extension add scopeguard --from https://github.com/rlgdev/spec-kit-scopeguard/releases/download/v0.5.0/scopeguard.zip
+specify extension add archiguard --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.3.0/archiguard.zip
+specify preset add --from https://github.com/rlgdev/spec-kit-archiguard/releases/download/v0.3.0/archiguard-preset.zip
 specify extension add auditguard --from https://github.com/rlgdev/spec-kit-auditguard/releases/download/v0.3.0/auditguard.zip
 specify extension add guardians  --from https://github.com/rlgdev/spec-kit-guardians/releases/download/v0.2.0/guardians.zip
 bash .specify/extensions/guardians/scripts/bash/guardians.sh configure
@@ -99,8 +99,8 @@ Guardians 0.2.0 | configure | /work/orders
 config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, archiguard, auditguard
 
   Siblings:
-  scopeGuard : scopeGuard 0.4.1 | configure
-  archiGuard : archiGuard 0.2.0 | configure
+  scopeGuard : scopeGuard 0.5.0 | configure
+  archiGuard : archiGuard 0.3.0 | configure
   auditGuard : auditGuard 0.3.0 | configure
 
   Changed:
@@ -110,8 +110,8 @@ config: .specify/extensions/guardians/guardians-config.yml | order: scopeguard, 
     .specify/extensions.yml: 20 hook priorities set: auditguard after_* 10 -> 90 (10), auditguard before_* 10 -> 1 (10)
 
   Tools:
-    scopeGuard : 0.4.1 | integration embedded | mode enforce | hooks 0/5
-    archiGuard : 0.2.0 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
+    scopeGuard : 0.5.0 | integration embedded | mode enforce | hooks 0/5
+    archiGuard : 0.3.0 | integration inline | mode enforce | hooks 0/6 | scope gate in pipeline | preset installed
     auditGuard : 0.3.0 | integration hooks | mode record | hooks 20/20
     Guardians  : 0.2.0
 
@@ -190,7 +190,7 @@ matters as soon as archiGuard runs through hooks.
 | `modes_agree` | warn | scopeGuard `mode` ≠ archiGuard `mode` (auditGuard's `record`/`enforce` means something else and is only shown) |
 | `gitattributes` | warn | auditGuard's three `-text` lines are missing |
 | `codeowners` | warn | a CODEOWNERS file exists but names no owner for `audit/`, `.specify/standards/`, `.specify/archiguard/` or `.specify/extensions/` |
-| `loop_feedback_recorded` | warn | archiGuard (0.2+) writes the loop feedback to the domain master design after coding, but auditGuard is older than 0.3.0 or has `collectors.archiguard.feedback: false`, so nobody records and triages it; `[--]` when the feedback is switched off |
+| `loop_feedback_recorded` | warn | archiGuard (0.3+) writes the loop feedback to the domain master design after coding, but auditGuard is older than 0.3.0 or has `collectors.archiguard.feedback: false`, so nobody records and triages it; `[--]` when the feedback is switched off |
 
 Each `[WARN]` and `[FAIL]` line comes with a `fix:` - a command, or the two files and keys that disagree.
 Severities are set in `guardians-config.yml` (below). `verify --json` prints the same as data; exit `1` on a
@@ -283,14 +283,14 @@ specify bundle catalog remove https://raw.githubusercontent.com/rlgdev/spec-kit-
   `specify preset remove archiguard-templates`, then `specify extension remove guardians` and the three siblings
   (`extension remove` takes their agent events along). The preset wraps `/speckit.plan`, `/speckit.tasks`,
   `/speckit.implement` and `/speckit.analyze` around archiGuard; left behind, those commands fail at the missing
-  runner (archiGuard's preset after 0.1.1 reports `archiGuard not installed - skipped` and goes on).
+  runner (archiGuard's preset since 0.2.0 reports `archiGuard not installed - skipped` and goes on).
 - A catalog file left as `catalogs: []` (the Guardians entry was its only one) makes Spec Kit's extension search,
   update and catalog list fail: delete `.specify/extension-catalogs.yml`, and Spec Kit uses its own catalogs again.
 - Keeping scopeGuard on its own (it was installed before the bundle, so the bundle leaves it)? Guardians set it
   to `integration: embedded`, which runs only inside archiGuard: set `integration: inline` in
   `.specify/extensions/scopeguard/scopeguard-config.yml`, add its preset (`specify preset add --from
   https://github.com/rlgdev/spec-kit-scopeguard/releases/latest/download/scopeguard-preset.zip`) and run its
-  `configure` (scopeGuard after 0.4.1 warns while it is embedded without archiGuard).
+  `configure` (scopeGuard since 0.5.0 warns while it is embedded without archiGuard).
 - Guardians' other edits stay in place (they are the siblings' documented settings); revert them with
   `git checkout` of the two config files and `.specify/extensions.yml` if you remove the siblings too.
 
